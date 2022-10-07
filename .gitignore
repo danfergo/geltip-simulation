@@ -1,5 +1,5 @@
 geltip_dataset/dataset
-MUJOCO_LOG.txt
+MUJOCO_LOG.TXT
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
