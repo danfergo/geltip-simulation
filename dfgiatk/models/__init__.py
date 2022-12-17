@@ -2,7 +2,7 @@ import torch
 from torch import nn
 
 
-def load_model(n_activations=2):
+def resnet3D(n_activations=2):
     model = torch.hub.load('facebookresearch/pytorchvideo', 'slow_r50', pretrained=True)
 
     # print(model.blocks[6])
