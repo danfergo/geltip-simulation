@@ -137,7 +137,7 @@ class DatasetCollectionBehaviour:
             tuple([self.GELTIP_C[i] + position[i] for i in range(3)])
         self.move(p, angles)
 
-    def wake_up(self):
+    def on_update(self):
 
         # move from the 0,0 / home position to a higher position,
         # so that it doesnt collide with clamps and the sensor

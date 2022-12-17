@@ -46,6 +46,9 @@ class E:
         except KeyError as e:
             raise KeyError('Configuration "' + e.args[0] + '" is missing. Check the experimenter configurations.')
 
+    def __contains__(self, item):
+        return item in self.config
+
     def __getattr__(self, item):
         return self[item]
 
@@ -75,11 +78,10 @@ def check_experiment_exists(description, append):
                 return e_dir
             else:
                 print('')
-                print('THIS EXPERIMENT ALREADY EXISTS!')
                 print('---')
                 print(description)
                 print('---')
-                print('Erase it and continue? [Y/n]')
+                print('Already exists. DELETE EXPERIMENT ? [Y/n]')
                 if input() == 'Y':
                     shutil.rmtree(outputs_path + e_dir)
                     print('done.')
@@ -88,9 +90,10 @@ def check_experiment_exists(description, append):
     return True
 
 
-def run(description=None, entry=None, config=None, listeners=None, append=False, tmp=False, open_e=False):
+def run(description=None, entry=None, config=None, src=None, listeners=None, append=False, tmp=False, open_e=False):
     config = config or {}
     listeners = listeners or []
+    src = src or 'src'
 
     description = description
     event_listeners = listeners
@@ -102,13 +105,12 @@ def run(description=None, entry=None, config=None, listeners=None, append=False,
     # calculates YYYYMMDDHHMM string
     currentDT = datetime.datetime.strptime(dt, "%Y-%m-%d %H:%M:%S") \
         if append and dt is not True else datetime.datetime.now()
-    workspace_path = '/tmp' if tmp else os.getcwd()
+    workspace_path = '/tmp' if tmp else os.getcwd() + '/'
     experiment_key = currentDT.strftime("%Y-%m-%d %H:%M:%S")
     outputs_path = workspace_path + '/outputs/'
-    experiment_path = outputs_path + experiment_key
+    experiment_path = outputs_path + experiment_key + '/'
     config['__ws__'] = workspace_path
     config['__out__'] = experiment_path + '/out'
-
     # ensure experiments outputs folder exists
     if not os.path.isdir(outputs_path):
         raise Exception("The outputs folder for the current working dir does not exist (or isn't a folder).")
@@ -126,7 +128,7 @@ def run(description=None, entry=None, config=None, listeners=None, append=False,
         f.close()
 
         # copy src folder
-        shutil.copytree(workspace_path + '/src', experiment_path + '/src')
+        shutil.copytree(workspace_path + src, experiment_path + src)
 
     # open folder
     if open_e:

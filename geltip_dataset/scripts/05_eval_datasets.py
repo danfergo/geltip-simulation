@@ -64,7 +64,6 @@ def main():
         sim_imgs = []
 
         for obj in objects:
-
             for i in range(N_ROWS):
                 for j in range(N_CONTACTS):
                     real_img = (cv2.cvtColor(

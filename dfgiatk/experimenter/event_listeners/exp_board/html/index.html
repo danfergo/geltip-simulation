@@ -1,0 +1,121 @@
+<html lang="en">
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet"
+          integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+    <!-- icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+
+
+    <title>eBoard</title>
+    <script type="text/javascript">
+        (async function main() {
+            let lastEpoch = -1;
+            async function delay(t) {
+              return new Promise(res => setTimeout(res, t*1000));
+            }
+
+            while(true){
+                const res1 = await fetch('/api');
+                const data = await res1.json();
+
+                if ( !data ) { // fail safe
+                    continue;
+                }
+
+                // console.log(data, data.epoch);
+                await delay(1);
+                console.log('data', data);
+
+                if (lastEpoch != -1 && data.epoch != lastEpoch) {
+                    const res2 = await fetch('/');
+                    const html = await res2.text();
+
+                    const wrapEl = document.createElement('div');
+                    wrapEl.innerHTML = html;
+
+                    const oldContent = document.querySelector('#main-container');
+                    const newContent = wrapEl.querySelector('#main-container');
+
+                    oldContent.innerHTML = newContent.innerHTML;
+
+
+                    console.log(wrapEl);
+                }
+                lastEpoch = data.epoch;
+            }
+
+        })();
+    </script>
+    <style type="text/css">
+        body > nav.navbar {
+            background-color: #80ff75 !important;
+            box-shadow: 0 0 0.3rem #008106;
+        }
+
+        img {
+            max-width:100%;
+        }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/">eBoard</a>
+<!--        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"-->
+<!--                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">-->
+<!--            <span class="navbar-toggler-icon"></span>-->
+<!--        </button>-->
+<!--        <div class="collapse navbar-collapse" id="navbarNav">-->
+<!--            <ul class="navbar-nav">-->
+<!--                <li class="nav-item">-->
+<!--                    <a class="nav-link active" aria-current="page" href="#">Home</a>-->
+<!--                </li>-->
+<!--                <li class="nav-item">-->
+<!--                    <a class="nav-link" href="#">Features</a>-->
+<!--                </li>-->
+<!--                <li class="nav-item">-->
+<!--                    <a class="nav-link" href="#">Pricing</a>-->
+<!--                </li>-->
+<!--                <li class="nav-item">-->
+<!--                    <a class="nav-link disabled">Disabled</a>-->
+<!--                </li>-->
+<!--            </ul>-->
+<!--        </div>-->
+    </div>
+</nav>
+<div id="main-container" class="container pt-4 pb-3">
+
+
+    ${main_content}
+
+
+    <!-- Content here -->
+
+    <div class="text-center">
+        <hr style="opacity:0.1">
+        <i class="bi bi-heart-fill"></i> Made with love by <a href="https://danfergo.github.io/">@danfergo</a>.
+
+    </div>
+</div>
+
+
+<!-- Optional JavaScript; choose one of the two! -->
+
+<!-- Option 1: Bootstrap Bundle with Popper -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p"
+        crossorigin="anonymous"></script>
+
+<!-- Option 2: Separate Popper and Bootstrap JS -->
+<!--
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.10.2/dist/umd/popper.min.js" integrity="sha384-7+zCNj/IqJ95wo16oMtfsKbZ9ccEh31eOz1HGyDuCQ6wgnyJNSYdrPa03rtR1zdB" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.min.js" integrity="sha384-QJHtvGhmr9XOIpI6YVutG+2QOK9T+ZnN4kzFN1RtK3zEFEIsxhlmWl5/YESvpZ13" crossorigin="anonymous"></script>
+-->
+</body>
+</html>

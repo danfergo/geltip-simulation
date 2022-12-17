@@ -32,10 +32,9 @@ def main():
         rgb = cv2.cvtColor(cv2.imread(dataset_path + 'real_rgb/' + obj + '/' + key + '.png'),
                            cv2.COLOR_BGR2RGB)
         depth = np.load(dataset_path + 'sim_depth/' + obj + '/' + key + '.npy')
-
         in_contact_rgb = in_contact_mask(bkg_depth, depth)
 
-        depth = to_normed_rgb(depth)
+        # depth = to_normed_rgb(depth)
 
         # manual alignment
         height, width = rgb.shape[:2]
@@ -43,14 +42,15 @@ def main():
 
         align_matrix = cv2.getRotationMatrix2D(center=center, angle=195, scale=1.15)
         rgb_aligned = cv2.warpAffine(src=rgb, M=align_matrix, dsize=(width, height))
+        depth_aligned = cv2.warpAffine(src=depth, M=align_matrix, dsize=(width, height))
 
-        if show_alignment_panel:
-            diff_aligned = (rgb_aligned * 0.5 + in_contact_rgb * 0.5).astype(np.uint8)
-
-            show_panel([rgb, in_contact_rgb, rgb_aligned, diff_aligned], (2, 2))
+        # if show_alignment_panel:
+        #     diff_aligned = (rgb_aligned * 0.5 + in_contact_rgb * 0.5).astype(np.uint8)
+        #     show_panel([rgb, in_contact_rgb, rgb_aligned, diff_aligned], (2, 2))
 
         rgb_aligned = cv2.cvtColor(rgb_aligned, cv2.COLOR_BGR2RGB)
         # cv2.imwrite(dataset_path + 'real_rgb_aligned/' + obj + '/' + key + '.png', rgb_aligned * mask3)
+        np.save(open(dataset_path + 'sim_depth_aligned/' + obj + '/' + key + '.npy', 'wb'), depth_aligned * mask)
 
     # show
     for obj in objects:

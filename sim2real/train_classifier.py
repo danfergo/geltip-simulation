@@ -6,6 +6,7 @@ from os import path
 from torch import nn, optim
 
 from dfgiatk.loaders import ImageLoader
+from dfgiatk.loaders.image_loader import LocalizationLabeler, ClassificationLabeler
 from dfgiatk.models import resnet50
 from dfgiatk.metrics import accuracy
 
@@ -15,9 +16,15 @@ from dfgiatk.train import fit_to_dataset
 
 
 def loader(partition, epoch_size, batch_size, set):
+    samples = ImageLoader.load_from_yaml(
+        path.join(e.data_path, partition + '_split.yaml'),
+        path.join(e.data_path, set)
+    )
+    labeler = ClassificationLabeler(samples)
+
     return ImageLoader(
-        path.join(e.data_path + set),
-        yaml.load(open(path.join(e.data_path, partition + '_split.yaml')), yaml.Loader),
+        samples,
+        labeler=labeler,
         epoch_size=epoch_size,
         batch_size=batch_size,
         transform=e[partition + '_transform']
@@ -26,13 +33,14 @@ def loader(partition, epoch_size, batch_size, set):
 
 run(
     description="""
-        # ResNet sim2sim lr0.1 sim_geodesic_elastic_bkg (localization). 
+        # ResNet sim2sim lr0.1 sim_geodesic_elastic_bkg (classification) aug sim2real. 
         """,
     config={
         'lr': 0.1,
         # data
-        'dataset': 'sim_geodesic_elastic_bkg',
         'data_path': './geltip_dataset/dataset/',
+        'train_dataset': 'sim_geodesic_elastic_bkg',
+        '{data_loader}': lambda: loader('train', e['batches_per_epoch'], e['batch_size'], e['train_dataset']),
         'train_transform': iaa.Sequential([
             # iaa.Multiply(1 / 255.0),
             iaa.Resize({"height": 120, "width": "keep-aspect-ratio"}),
@@ -44,9 +52,11 @@ run(
                 iaa.Sharpen(alpha=0.5)
             ])
         ]),
-        '{data_loader}': lambda: loader('train', e['batches_per_epoch'], e['batch_size'], e['dataset']),
-        'val_transform': None,
-        '{val_loader}': lambda: loader('val', e['n_val_batches'], e['batch_size'],  e['dataset']),
+        'val_dataset': 'real_rgb_aligned',
+        '{val_loader}': lambda: loader('val', e['n_val_batches'], e['batch_size'], e['val_dataset']),
+        'val_transform': iaa.Sequential([
+            iaa.Resize({"height": 120, "width": "keep-aspect-ratio"}),
+        ]),
 
         # network
         'model': resnet50(n_activations=8),

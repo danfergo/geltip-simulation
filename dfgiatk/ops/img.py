@@ -19,5 +19,6 @@ def normalize(img):
     return img1 / mx
 
 
-def show(name, img):
-    cv2.imshow(name, normalize(img))
+def denormalize(img):
+    assert img.dtype == np.float32 or img.dtype == np.float64
+    return (img * 255).astype(np.uint8)
