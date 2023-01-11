@@ -1,13 +1,12 @@
 from dfgiatk.experimenter import run, e, Logger, Validator, Plotter, ModelSaver, EBoard
 
-import yaml
 import cv2
 import numpy as np
 
 from os import path
 from torch import nn, optim
 
-from dfgiatk.loaders import ImageLoader
+from dfgiatk.loaders import DatasetSampler
 from dfgiatk.loaders.image_loader import NumpyMapsLabeler
 from dfgiatk.models import resnet50, unet
 from dfgiatk.metrics import accuracy
@@ -17,7 +16,7 @@ from dfgiatk.train import fit_to_dataset
 
 
 def loader(partition, epoch_size, batch_size, set):
-    samples = ImageLoader.load_from_yaml(
+    samples = DatasetSampler.load_from_yaml(
         path.join(e.data_path, partition + '_split.yaml'),
         path.join(e.data_path, set)
     )
@@ -30,7 +29,7 @@ def loader(partition, epoch_size, batch_size, set):
         transform=transform
     )
 
-    return ImageLoader(
+    return DatasetSampler(
         samples,
         labeler=labeler,
         epoch_size=epoch_size,

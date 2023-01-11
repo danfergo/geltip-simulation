@@ -1,10 +1,10 @@
-from yarok import ConfigBlock
-from yarok.components_manager import component
-from yarok.mjc.interface import InterfaceMJC
+from yarok import ConfigBlock, component, interface
+from yarok.platforms.mjc import InterfaceMJC
 
 import serial
 
 
+@interface()
 class AnetA30InterfaceMJC:
 
     def __init__(self, interface: InterfaceMJC):
@@ -43,12 +43,14 @@ class AnetA30InterfaceMJC:
         pass
 
 
+@interface(
+    defaults={
+        'serial_path': '/dev/ttyUSB0'
+    }
+)
 class AnetA30InterfaceHW:
 
     def __init__(self, config: ConfigBlock):
-        config.defaults({
-            'serial_path': '/dev/ttyUSB0'
-        })
         self.ser_con = serial.Serial(config['serial_path'], 115200, timeout=1)
 
         self.MAX_X = 320
@@ -134,8 +136,10 @@ class AnetA30InterfaceHW:
 
 @component(
     tag="anet_a30",
-    interface_mjc=AnetA30InterfaceMJC,
-    interface_hw=AnetA30InterfaceHW,
+    defaults={
+        'interface_mjc': AnetA30InterfaceMJC,
+        'interface_hw': AnetA30InterfaceHW
+    },
     # language=xml
     template="""
     <mujoco>
@@ -233,9 +237,9 @@ class AnetA30InterfaceHW:
         </body>
     </worldbody>
     <actuator>
-        <position name="ax" gear="100" joint="xaxis" forcelimited="true" forcerange="-10000 10000"/>
-        <position name="ay" gear="100" joint="yaxis" forcelimited="true" forcerange="-10000 10000"/>
-        <position name="az" gear="100" joint="zaxis" forcelimited="true" forcerange="-10000 10000"/>
+        <position name="ax" gear="100" joint="xaxis" forcelimited="true" forcerange="-10000 10000" kp='100'/>
+        <position name="ay" gear="100" joint="yaxis" forcelimited="true" forcerange="-10000 10000" kp='100'/>
+        <position name="az" gear="100" joint="zaxis" forcelimited="true" forcerange="-10000 10000" kp='100'/>
     </actuator>
     <sensor>
         <actuatorpos name="x" actuator="ax"/>

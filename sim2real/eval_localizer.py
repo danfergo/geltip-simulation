@@ -1,4 +1,6 @@
-from dfgiatk.experimenter import run, e, Logger, Validator, Plotter, ModelSaver, EBoard
+from math import sqrt
+
+from dfgiatk.experimenter import run, e
 
 import cv2
 import numpy as np
@@ -6,12 +8,59 @@ import numpy as np
 from os import path
 from torch import nn, optim
 import torch
-from dfgiatk.loaders import ImageLoader
-from dfgiatk.loaders.image_loader import NumpyMapsLabeler, LocalizationLabeler
-from dfgiatk.models import unet, resnet50
+from dfgiatk.loaders import DatasetSampler
+from dfgiatk.loaders.image_loader import LocalizationLabeler, ImageLoader
+from dfgiatk.models import resnet50
 
 import imgaug.augmenters as iaa
+
+from dfgiatk.ops.img import cvt_batch, CVT_HWC2CHW
 from dfgiatk.train import predict_batch
+
+config = {
+    'description': """
+        Eval localizer
+    """,
+    'config': {
+        # network
+        'weights_path': '/home/danfergo/Projects/PhD/geltip_simulation/outputs/2023-01-04 10:11:54/out/best_model',
+        # 'weights_path': '/home/danfergo/Projects/PhD/geltip_simulation/outputs/2023-01-04 12:30:09/out/best_model',
+        '{model}': lambda: resnet50(n_activations=2, weights=e.weights_path),
+
+        # train
+        'loss': nn.MSELoss(),
+        # '{optimizer}': lambda: optim.Adadelta(e['model'].parameters(), lr=e.lr),
+        'epochs': 50,
+        'batch_size': None,
+        'batches_per_epoch': 1,
+        'feed_size': 32,
+        'train_device': 'cuda',
+
+        # data
+        'data_path': './geltip_dataset/dataset/',
+        'samples_split': 'val_split.yaml',
+        'dataset': 'sim_geodesic_elastic_bkg',
+        # 'dataset': 'real_rgb_aligned',
+        '{data_loader}': lambda: DatasetSampler(
+            samples=DatasetSampler.load_from_yaml(
+                path.join(e.data_path, e.samples_split),
+                path.join(e.data_path, e.dataset)
+            ),
+            loader=ImageLoader(
+                transform=lambda xs, **kwargs: cvt_batch(iaa.Sequential([
+                    iaa.Resize({"height": 120, "width": "keep-aspect-ratio"}),
+                ])(images=xs.astype(np.float32) / 255.0), CVT_HWC2CHW).astype(np.float32)
+            ),
+            labeler=LocalizationLabeler(
+                locations_path=path.join(e.data_path, 'object_locations.yaml')
+            ),
+            epoch_size=e.batches_per_epoch,
+            batch_size=None,
+            random_sampling=False
+        ),
+
+    }
+}
 
 
 def eval_dataset():
@@ -46,12 +95,18 @@ def eval_dataset():
             # # print(x.size()[0])
             # print('---------')
             #
-            for i in range(x.size()[0]):
-                print('----------------')
-                print('shapes', y_true_np[i].shape, y_true_np[i].shape)
+            sum_err = 0
+            n_samples = x.size()[0]
+            for i in range(n_samples):
+                # print('----------------')
+                # print('shapes', y_true_np[i].shape, y_true_np[i].shape)
 
-                y_true_ = tuple([round(c*0.25) for c in reversed(y_true_np[i].tolist())])
-                y_pred_ = tuple([round(c*0.25) for c in reversed(y_pred_np[i].tolist())])
+                y_true_ = tuple([round(c * 0.25) for c in reversed(y_true_np[i].tolist())])
+                y_pred_ = tuple([round(c * 0.25) for c in reversed(y_pred_np[i].tolist())])
+
+                err = sqrt(sum([(y_true_[i] - y_pred_[i]) ** 2 for i in range(2)]))
+                sum_err += err
+                print(err)
 
                 frame = x_np[i]
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -72,64 +127,13 @@ def eval_dataset():
                     # y_pred_np[i][..., 0],
                 ], axis=1))
                 cv2.waitKey(-1)
-            # print('xxx')
-def load_model(model, path):
-    model.load_state_dict(
-        torch.load(path)
-    )
-    return model
+            print('n samples: ', n_samples)
+            print('mean err: ', sum_err / n_samples)
+
 
 run(
-    description="""
-        Eval localizer
-        """,
-    config={
-        'lr': 0.1,
-        # data
-        'data_path': './geltip_dataset/dataset/',
-        'samples_split': 'val_split.yaml',
-        # 'dataset': 'sim_geodesic_elastic_bkg',
-        'dataset': 'real_rgb_aligned',
-        '{data_loader}': lambda: ImageLoader(
-            samples=ImageLoader.load_from_yaml(
-                path.join(e.data_path, e.samples_split),
-                path.join(e.data_path, e.dataset)
-            ),
-            labeler=LocalizationLabeler(
-                locations_path=path.join(e.data_path, 'object_locations.yaml')
-            ),
-            epoch_size=e.batches_per_epoch,
-            batch_size=e.batch_size,
-            transform=iaa.Sequential([
-            #     # iaa.Multiply(1 / 255.0),
-                iaa.Resize({"height": 120, "width": "keep-aspect-ratio"}),
-            #     # iaa.RandAugment(n=2, m=9)
-            #     iaa.OneOf([
-            #         # iaa.Affine(rotate=0.1),
-            #         iaa.AdditiveGaussianNoise(scale=0.7),
-            #         iaa.Add(50, per_channel=True),
-            #         iaa.Sharpen(alpha=0.5)
-            #     ])
-            ])
-        ),
-        # '{val_loader}': lambda: loader('val', e['n_val_batches'], e['batch_size'], e['val_dataset']),
-
-        # network
-        'weights_path': '/home/danfergo/Projects/PhD/geltip_simulation/outputs/2022-12-15 15:26:49/out/best_model',
-        '{model}': lambda: load_model(resnet50(n_activations=2), e.weights_path),
-
-        # train
-        'loss': nn.MSELoss(),
-        '{optimizer}': lambda: optim.Adadelta(e['model'].parameters(), lr=e.lr),
-        'epochs': 50,
-        'batch_size': None,
-        'batches_per_epoch': 1,
-        'feed_size': 32,
-        'train_device': 'cuda',
-    },
+    **config,
     entry=eval_dataset,
-    listeners=lambda: [
-    ],
     open_e=False,
     src='sim2real'
 )

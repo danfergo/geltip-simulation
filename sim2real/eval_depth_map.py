@@ -1,16 +1,14 @@
 from dfgiatk.experimenter import run, e, Logger, Validator, Plotter, ModelSaver, EBoard
 
-import yaml
 import cv2
 import numpy as np
 
 from os import path
 from torch import nn, optim
 import torch
-from dfgiatk.loaders import ImageLoader
+from dfgiatk.loaders import DatasetSampler
 from dfgiatk.loaders.image_loader import NumpyMapsLabeler
-from dfgiatk.models import resnet50, unet
-from dfgiatk.metrics import accuracy
+from dfgiatk.models import unet
 
 import imgaug.augmenters as iaa
 from dfgiatk.train import fit_to_dataset, fit_to_batch, predict_batch
@@ -67,11 +65,12 @@ def eval_dataset():
                 cv2.waitKey(-1)
 
         print('xxx')
+
+
 def load_model(model, path):
-    model.load_state_dict(
-        torch.load(path)
-    )
+    model.load_state_dict(torch.load(path))
     return model
+
 
 run(
     description="""
@@ -83,8 +82,8 @@ run(
         'data_path': './geltip_dataset/dataset/',
         'samples_split': 'val_split.yaml',
         'dataset': 'sim_geodesic_elastic_bkg',
-        '{data_loader}': lambda: ImageLoader(
-            samples=ImageLoader.load_from_yaml(
+        '{data_loader}': lambda: DatasetSampler(
+            samples=DatasetSampler.load_from_yaml(
                 path.join(e.data_path, e.samples_split),
                 path.join(e.data_path, e.dataset)
             ),

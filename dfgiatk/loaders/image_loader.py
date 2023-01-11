@@ -12,7 +12,7 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
-from dfgiatk.ops.img import denormalize
+from dfgiatk.ops.img import denormalize, cvt_batch, CVT_HWC2CHW
 
 
 def _find_classes(dir):
@@ -92,52 +92,59 @@ class NumpyMapsLabeler(Labeler):
         return m
 
 
-class ImageLoader(torch.utils.data.IterableDataset):
+class ImageLoader(Labeler):
+
+    def __init__(self, transform=None):
+        super().__init__(transform=transform)
+
+    def get_label(self, s):
+        img = cv2.imread(s)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        return img
+
+
+class DatasetSampler(torch.utils.data.IterableDataset):
     def __init__(self,
                  samples,
+                 loader=None,
                  labeler=None,
                  epoch_size=1,
                  batch_size=32,
-                 transform=None,
-                 random_sampling=True):
-        super(ImageLoader).__init__()
+                 random_sampling=True,
+                 return_names=False):
+        super(DatasetSampler).__init__()
 
         self.batch_size = batch_size or len(samples)
-        self.transform = transform
+        self.epoch_size = epoch_size or len(samples)
+        self.loader = loader
         self.labeler = labeler
         self.samples = samples
-        self.epoch_size = epoch_size
         self.random_sampling = random_sampling
+        self.return_names = return_names
 
     def get_sample(self, i):
         # Get random sample
         sample_path = random.choice(self.samples) if self.random_sampling else self.samples[i]
-        img = cv2.imread(sample_path)
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        return img, self.labeler.get_label(sample_path)
+
+        return self.loader.get_label(sample_path), \
+               self.labeler.get_label(sample_path), \
+               sample_path
 
     def sample_batch(self):
-        imgs, ys = list(zip(*[self.get_sample(i) for i in range(self.batch_size)]))
-        imgs, ys = np.array(imgs), np.array(ys)
+        xs, ys, samples = list(zip(*[self.get_sample(i) for i in range(self.it, self.it + self.batch_size)]))
+        xs, ys = np.array(xs), np.array(ys)
 
-        if self.transform is not None:
-            imgs = self.transform(images=imgs)
+        if self.loader.transform is not None:
+            xs = self.loader.transform(xs, samples=samples)
 
         if self.labeler.transform is not None:
             ys = self.labeler.transform(ys)
 
-        x = torch.from_numpy(imgs)
-        x = torch.swapaxes(x, 2, 3)
-        x = (torch.swapaxes(x, 1, 2) / 255.0).float()
-
+        x = torch.from_numpy(xs)
         y_true = torch.from_numpy(ys)
-        # y_true = torch.swapaxes(y_true, 2, 3)
-        # y_true = torch.swapaxes(y_true, 1, 2).float()
-        # print('y true', y_true.size())
 
-        # x = torch.stack(batch[0])
-        # y_true = torch.stack(batch[1])
-
+        if self.return_names:
+            return x.to('cuda'), y_true.to('cuda'), samples
         return x.to('cuda'), y_true.to('cuda')
 
     def __iter__(self):
@@ -148,8 +155,8 @@ class ImageLoader(torch.utils.data.IterableDataset):
         if self.it >= self.epoch_size:
             raise StopIteration
         else:
-            self.it += 1
             b = self.sample_batch()
+            self.it += 1
             return b
 
     @staticmethod
@@ -166,7 +173,7 @@ def test():
     base_path = '/home/danfergo/Projects/PhD/geltip_simulation/geltip_dataset/dataset/'
     base = path.join('', set)
 
-    samples = ImageLoader.load_from_yaml(
+    samples = DatasetSampler.load_from_yaml(
         path.join(base_path, split_file),
         path.join(base_path, set)
     )
@@ -175,10 +182,9 @@ def test():
     # labeler = LocalizationLabeler()
     labeler = NumpyMapsLabeler(path.join(base_path, 'sim_depth_aligned'))
 
-    loader = ImageLoader(
-        samples,
-        labeler=labeler,
-        transform=iaa.Sequential([
+    def data_preparation(xs):
+        xs = (cvt_batch(xs, CVT_HWC2CHW) / 255.0).astype(np.float32)
+        return iaa.Sequential([
             iaa.Resize({"height": 120, "width": "keep-aspect-ratio"}),
             iaa.OneOf([
                 iaa.Affine(rotate=0.1),
@@ -186,21 +192,27 @@ def test():
                 iaa.Add(50, per_channel=True),
                 iaa.Sharpen(alpha=0.5)
             ])
-        ])
+        ])(images=xs)
+
+    loader = DatasetSampler(
+        samples,
+        labeler=labeler,
+        transform=data_preparation
     )
 
-    # batch_size=32
-    # data = {"video": [], 'start': [], 'end': [], 'tensorsize': []}
     for x, y in loader:
         imgs = x.detach().cpu().numpy()
         imgs = np.swapaxes(imgs, 1, 2)
         imgs = np.swapaxes(imgs, 2, 3)
-        print(y.size())
+
         for i in range(x.size()[0]):
             img = denormalize(imgs[i])
             plt.imshow(img)
             plt.show()
 
+    # print(y.size())
+    # batch_size=32
+    # data = {"video": [], 'start': [], 'end': [], 'tensorsize': []}
     # print(batch[0].size())
     # print(batch)
     # for i in range(len(batch['path'])):

@@ -6,7 +6,6 @@ import scipy.ndimage.filters as fi
 
 from experimental_setup.geltip.sim_model.scripts.utils.camera \
     import get_camera_matrix, get_cloud_from_depth
-from experimental_setup.geltip.sim_model.scripts.utils.vis import plot_depth_lines, show_field, show_panel
 
 
 def dot(a, b):

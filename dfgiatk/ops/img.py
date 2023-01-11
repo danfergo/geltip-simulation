@@ -22,3 +22,17 @@ def normalize(img):
 def denormalize(img):
     assert img.dtype == np.float32 or img.dtype == np.float64
     return (img * 255).astype(np.uint8)
+
+
+def cvt_batch(batch, cv_format):
+    if cv_format == CVT_HWC2CHW:
+        batch = np.swapaxes(batch, 2, 3)
+        batch = np.swapaxes(batch, 1, 2)
+    else:
+        raise Exception('[cvtBatch] Unkown conversion format.')
+    return batch
+
+
+CVT_HWC2CHW = 1
+CVT_CHW2HWC = 2
+

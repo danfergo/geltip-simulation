@@ -96,7 +96,7 @@ def run(description=None, entry=None, config=None, src=None, listeners=None, app
     src = src or 'src'
 
     description = description
-    event_listeners = listeners
+    event_listeners = listeners or (lambda: [])
 
     dt = check_experiment_exists(description.strip(), append)
     if not dt:

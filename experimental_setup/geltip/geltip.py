@@ -1,6 +1,5 @@
-from yarok import ConfigBlock
-from yarok.components_manager import component
-from yarok.mjc.interface import InterfaceMJC
+from yarok import ConfigBlock, component, interface
+from yarok.platforms.mjc import InterfaceMJC
 
 import numpy as np
 import cv2
@@ -29,6 +28,7 @@ def get_cloud_from_depth(cam_matrix, depth):
     return o3d_cloud
 
 
+@interface()
 class GelTipInterfaceMJC:
 
     def __init__(self, interface: InterfaceMJC):
@@ -124,6 +124,7 @@ class GelTipInterfaceMJC:
         return self.raw_depth
 
 
+@interface()
 class GelTipInterfaceHW:
 
     def __init__(self, config: ConfigBlock):
@@ -144,9 +145,11 @@ class GelTipInterfaceHW:
 
 @component(
     tag="geltip",
-    interface_mjc=GelTipInterfaceMJC,
-    interface_hw=GelTipInterfaceHW,
-    probe=lambda c: {'camera': c.read()},
+    defaults={
+        'interface_mjc': GelTipInterfaceMJC,
+        'interface_hw': GelTipInterfaceHW,
+        'probe': lambda c: {'camera': c.read()},
+    },
     # language=xml
     template="""
         <mujoco>

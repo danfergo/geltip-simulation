@@ -7,7 +7,7 @@ from experimental_setup.geltip.sim_model.scripts.utils.vis import show_panel
 
 fields_size = (160, 120)
 sim_size = (640, 480)
-field = 'linear'
+field = 'geodesic'
 assets_path = os.path.dirname(os.path.abspath(__file__)) + '/../assets/'
 
 cloud, light_fields = SimulationModel.load_assets(assets_path, fields_size, sim_size, field, 3)
@@ -15,13 +15,13 @@ cloud, light_fields = SimulationModel.load_assets(assets_path, fields_size, sim_
 model = SimulationModel(**{
     'ia': 0.8,
     'light_sources': [
-        {'field': light_fields[0], 'color': [0, 0, 255], 'id': 0.5, 'is': 0.2},  # [108, 82, 255]
-        {'field': light_fields[1], 'color': [255, 0, 0], 'id': 0.5, 'is': 0.2},  # [255, 130, 115]
-        {'field': light_fields[2], 'color': [0, 255, 0], 'id': 0.5, 'is': 0.2},  # [120, 255, 153]
+        {'field': light_fields[0], 'color': [196, 94, 255], 'id': 0.5, 'is': 0.1},  # [108, 82, 255]
+        {'field': light_fields[1], 'color': [154, 144, 255], 'id': 0.5, 'is': 0.1},  # [255, 130, 115]
+        {'field': light_fields[2], 'color': [104, 175, 255], 'id': 0.5, 'is': 0.1},  # [120, 255, 153]
     ],
     'background_depth': np.load(assets_path + 'bkg.npy'),
     'cloud_map': cloud,
-    'background_img': np.ones(sim_size[::-1] + (3,), dtype=np.float32) * 255.0,  # cv2.imread(base + '/bkg.jpg'),
+    'background_img': np.zeros(sim_size[::-1] + (3,), dtype=np.float32) ,  # cv2.imread(base + '/bkg.jpg'),
     'elastomer_thickness': 0.004,
     'min_depth': 0.026,
     'texture_sigma': 0.00001,
@@ -31,6 +31,9 @@ model = SimulationModel(**{
 depths = [np.load(assets_path + ('bkg' if i == 0 else 'depth_' + str(i)) + '.npy') for i in range(4)]
 
 tactile_rgb = [model.generate(cv2.resize(depth, sim_size)) for i, depth in enumerate(depths) if i != 0]
+
+for frame in tactile_rgb:
+    print('imshow', frame.shape, frame.dtype, frame.min(), frame.max())
 
 show_panel(tactile_rgb)
 # cv2.imshow('tactile_rgb', to_panel(tactile_rgb))

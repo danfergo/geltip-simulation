@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 
 from experimental_setup.geltip.sim_model.scripts.utils.camera import circle_mask
-from experimental_setup.geltip.sim_model.scripts.utils.vis import show_panel, to_normed_rgb
+from experimental_setup.geltip.sim_model.scripts.utils.vis import to_normed_rgb
 
 
 def in_contact_mask(bkg_depth, depth):

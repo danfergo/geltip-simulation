@@ -1,7 +1,6 @@
 import serial
-from yarok import ConfigBlock
-from yarok.components_manager import component
-from yarok.mjc.interface import InterfaceMJC
+from yarok import ConfigBlock, component, interface
+from yarok.platforms.mjc import InterfaceMJC
 
 from experimental_setup.anet_a30.anet_a30 import AnetA30
 from math import pi
@@ -11,6 +10,7 @@ def deg2rad(deg):
     return deg / (180 / pi)
 
 
+@interface()
 class PrinterExtendedInterfaceMJC:
     def __init__(self, interface: InterfaceMJC):
         self.interface = interface
@@ -33,6 +33,9 @@ class PrinterExtendedInterfaceMJC:
         return sum([abs((deg2rad(angles[i]) * self.gear) - sensor_data[i]) for i in range(2)]) < 0.0006
 
 
+@interface(
+
+)
 class PrinterExtendedInterfaceHW:
 
     def __init__(self, config: ConfigBlock):
@@ -87,8 +90,10 @@ class PrinterExtendedInterfaceHW:
 
 @component(
     tag="printer_extended",
-    interface_mjc=PrinterExtendedInterfaceMJC,
-    interface_hw=PrinterExtendedInterfaceHW,
+    defaults={
+        'interface_mjc': PrinterExtendedInterfaceMJC,
+        'interface_hw': PrinterExtendedInterfaceHW,
+    },
     components=[
         AnetA30
     ],
@@ -117,8 +122,8 @@ class PrinterExtendedInterfaceHW:
     
                                 <body>
                                     <joint name="a1"
-                                           armature="100"
-                                           frictionloss="100"
+                                           damping="10"
+                                           frictionloss="10"
                                            type="hinge"
                                            axis="0 -1 0"/>
     
@@ -149,8 +154,8 @@ class PrinterExtendedInterfaceHW:
                                   <body name="geltip_mount">
                                       <joint name="a2"
                                            type="hinge"
-                                           armature="100"
-                                           frictionloss="100"
+                                           frictionloss="10"
+                                           damping="10"
                                            axis="0 0 1"/>
                                            
                                        <!-- lets the sim env work without sensor -->
@@ -165,8 +170,8 @@ class PrinterExtendedInterfaceHW:
                 </anet_a30>
             </worldbody>
             <actuator>
-                  <position name="a1" gear="100" joint="a1" forcelimited="true" forcerange="-1.05 1.05"/>
-                  <position name="a2" gear="100" joint="a2" forcelimited="true" forcerange="-1 1"/>
+                  <position name="a1" gear="100" joint="a1" forcelimited="true" forcerange="-1.05 1.05" kp='1000'/>
+                  <position name="a2" gear="100" joint="a2" forcelimited="true" forcerange="-1 1" kp='1000'/>
             </actuator>
             <sensor>
                    <actuatorpos name="a1" actuator="a1"/>

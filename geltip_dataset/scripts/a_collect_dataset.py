@@ -1,13 +1,10 @@
 import os
 
-from yarok import PlatformMJC, PlatformHW, ConfigBlock
-from yarok.components_manager import component
+from yarok import Platform, PlatformMJC, PlatformHW, ConfigBlock, component
 import yarok
 
 from math import pi, cos, sin
-import cv2
-import numpy as np
-from yarok.components.geltip.geltip import GelTip
+from experimental_setup.geltip.geltip import GelTip
 
 from experimental_setup.printer_extended.printer_extended import PrinterExtended
 
@@ -66,7 +63,17 @@ class DatasetCollectionWorld:
 
 class DatasetCollectionBehaviour:
 
-    def __init__(self, printer: PrinterExtended, geltip: GelTip, config: ConfigBlock):
+    def __init__(self, printer: PrinterExtended, geltip: GelTip, config: ConfigBlock, pl: Platform):
+
+        # yarok 0.0.15 bugfix
+        config = {
+            'dataset_path': os.path.dirname(os.path.abspath(__file__)) + '/../dataset/',
+            'dataset_name': 'sim_depth',
+            'save_data': False,
+            'object': 'sphere'
+        }
+
+        self.pl = pl
         self.config = config
         self.printer = printer
         self.geltip = geltip
@@ -127,9 +134,9 @@ class DatasetCollectionBehaviour:
     def move(self, position=None, angles=None):
         print('move: ', position, angles)
         self.printer.move(position, angles)
-        yarok.wait(lambda: self.printer.is_at(position, angles))
+        self.pl.wait(lambda: self.printer.is_at(position, angles))
         # t = time.time()
-        # yarok.wait(lambda: (time.time() - t) > 2)
+        # self.pl.wait_seconds(100)
         # x = input("press any key: \n")
 
     def movec(self, position=None, angles=None):
@@ -221,7 +228,7 @@ if __name__ == '__main__':
     save_data = False
 
     for obj in objects:
-        yarok.run({
+        Platform.create({
             'world': DatasetCollectionWorld,
             'behaviour': DatasetCollectionBehaviour,
             'defaults': {
@@ -230,6 +237,7 @@ if __name__ == '__main__':
                     'dataset_path': os.path.dirname(os.path.abspath(__file__)) + '/../dataset/',
                     'object': obj,
                     'save_data': save_data
+
                 },
                 'components': {
                     '/': {
@@ -238,7 +246,8 @@ if __name__ == '__main__':
                     '/geltip': {
                         'label_color': '.5 .5 .5'
                     }
-                }
+                },
+                'plugins': []
             },
             'environments': {
                 'sim': {
@@ -268,4 +277,4 @@ if __name__ == '__main__':
                     }
                 }
             },
-        })
+        }).run()
