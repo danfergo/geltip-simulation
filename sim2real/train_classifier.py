@@ -1,17 +1,14 @@
-from dfgiatk.experimenter import run, e, Logger, Validator, Plotter, EBoard
+from dfgiatk.experimenter import run, e, Logger, Validator, Plotter, EBoard, ModelSaver
 
 from os import path
 from torch import nn, optim
 import numpy as np
 
 from dfgiatk.loaders import DatasetSampler
-from dfgiatk.loaders.image_loader import ClassificationLabeler
+from dfgiatk.loaders.image_loader import ClassificationLabeler, NumpyMapsLabeler, LocalizationLabeler, ImageLoader
 from dfgiatk.models import resnet50
 from dfgiatk.metrics import accuracy
 
-import imgaug.augmenters as iaa
-
-from dfgiatk.ops.img import cvt_batch, CVT_HWC2CHW
 from dfgiatk.train import fit_to_dataset
 
 
@@ -20,14 +17,18 @@ def loader(partition, epoch_size, batch_size, set):
         path.join(e.data_path, partition + '_split.yaml'),
         path.join(e.data_path, set)
     )
+    loader = ImageLoader(
+        transform=e[partition + '_transform']
+    )
+
     labeler = ClassificationLabeler(samples)
 
     return DatasetSampler(
         samples,
+        loader=loader,
         labeler=labeler,
         epoch_size=epoch_size,
-        batch_size=batch_size,
-        transform=e[partition + '_transform']
+        batch_size=batch_size
     )
 
 
@@ -45,7 +46,7 @@ def transform(image_aug=False):
              ] if image_aug else [])
     )
 
-    def _(xs):
+    def _(xs, samples):
         torch_images = xs.astype(np.float32) / 255.0
         torch_images = seq(images=torch_images)
 
@@ -55,18 +56,19 @@ def transform(image_aug=False):
     return _
 
 
-run(
-    description="""
-        # ResNet sim2sim lr0.1 sim_geodesic_elastic_bkg (classification) aug sim2real. 
-        """,
-    config={
+config = {
+    'description': """
+        # sim2sim-classification-patches. 
+    """,
+    'config': {
         'lr': 0.1,
+
         # data
         'data_path': './geltip_dataset/dataset/',
-        'train_dataset': 'sim_geodesic_elastic_bkg',
+        'train_dataset': 'cropped_classification',
         '{data_loader}': lambda: loader('train', e['batches_per_epoch'], e['batch_size'], e['train_dataset']),
         'train_transform': transform(image_aug=True),
-        'val_dataset': 'real_rgb_aligned',
+        'val_dataset': 'cropped_classification',
         '{val_loader}': lambda: loader('val', e['n_val_batches'], e['batch_size'], e['val_dataset']),
         'val_transform': transform(image_aug=False),
 
@@ -87,13 +89,18 @@ run(
         'metrics_names': ['Accuracy'],
         'n_val_batches': 4,
         'val_feed_size': 32,
-    },
+    }
+}
+
+run(
+    **config,
     entry=fit_to_dataset,
     listeners=lambda: [
         Validator(),
+        ModelSaver(),
         Logger(),
         Plotter(),
-        EBoard()
+        EBoard(),
     ],
     open_e=False,
     src='sim2real'

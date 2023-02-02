@@ -1,7 +1,7 @@
 import os
 import cv2
 
-from experimental_setup.geltip.sim_model.scripts.utils.vis import show_panel
+from sim_model import show_panel
 
 
 def main():

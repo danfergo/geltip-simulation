@@ -2,8 +2,8 @@ import os
 import cv2
 import numpy as np
 
-from experimental_setup.geltip.sim_model.scripts.utils.camera import circle_mask
-from experimental_setup.geltip.sim_model.scripts.utils.vis import to_normed_rgb
+from sim_model import circle_mask
+from sim_model import to_normed_rgb, show_panel
 
 
 def in_contact_mask(bkg_depth, depth):
@@ -19,12 +19,16 @@ def main():
 
     objects = ['cone', 'sphere', 'random', 'cylinder', 'cylinder_shell', 'pacman', 'dot_in', 'dots']
 
-    show_alignment_panel = True
+    show_alignment_panel = False
     N_ROWS = 3
     N_CONTACTS = 6
 
     mask = circle_mask((640, 480))
     mask3 = np.stack([mask, mask, mask], axis=2)
+
+    if not os.path.exists(dataset_path + '/sim_depth_aligned'):
+        os.mkdir(dataset_path + '/sim_depth_aligned')
+        [os.mkdir(dataset_path + '/sim_depth_aligned' + '/' + obj) for obj in objects]
 
     def align(key):
         bkg_depth = np.load(dataset_path + 'sim_depth/cylinder/bkg.npy')
@@ -34,23 +38,33 @@ def main():
         depth = np.load(dataset_path + 'sim_depth/' + obj + '/' + key + '.npy')
         in_contact_rgb = in_contact_mask(bkg_depth, depth)
 
-        # depth = to_normed_rgb(depth)
 
         # manual alignment
         height, width = rgb.shape[:2]
-        center = (width / 2, height / 2)
+        center = (width // 2, height // 2)
 
-        align_matrix = cv2.getRotationMatrix2D(center=center, angle=195, scale=1.15)
-        rgb_aligned = cv2.warpAffine(src=rgb, M=align_matrix, dsize=(width, height))
-        depth_aligned = cv2.warpAffine(src=depth, M=align_matrix, dsize=(width, height))
+        rotation_matrix = cv2.getRotationMatrix2D(center=center, angle=192, scale=1.15)
+        rgb_aligned = cv2.warpAffine(src=rgb, M=rotation_matrix, dsize=(width+50, height+50))
 
-        # if show_alignment_panel:
-        #     diff_aligned = (rgb_aligned * 0.5 + in_contact_rgb * 0.5).astype(np.uint8)
-        #     show_panel([rgb, in_contact_rgb, rgb_aligned, diff_aligned], (2, 2))
+        tx = 0.0
+        ty = -20.0
+        translation_matrix = np.array([[1.0, 0.0, tx], [0.0, 1.0, ty]])
+        rgb_aligned = cv2.warpAffine(src=rgb_aligned, M=translation_matrix, dsize=(width, height))
+
+        # M = cv2.matFromArray(2, 3, cv2.CV_64FC1, [1, 0, 50, 0, 1, 100]);
+        #
+        # depth_aligned = cv2.warpAffine(src=depth, M=rotation_matrix, dsize=(width, height))
+
+        if show_alignment_panel:
+            # in_contact_rgb = to_normed_rgb(in_contact_rgb)
+            print(rgb_aligned.shape, in_contact_rgb.shape)
+            diff_aligned = (rgb_aligned * 0.5 + in_contact_rgb * 0.5).astype(np.uint8)
+            diff_aligned = cv2.circle(diff_aligned, center, 10, (0, 255, 0), 2)
+            show_panel([rgb, in_contact_rgb, rgb_aligned, diff_aligned], (2, 2))
 
         rgb_aligned = cv2.cvtColor(rgb_aligned, cv2.COLOR_BGR2RGB)
-        # cv2.imwrite(dataset_path + 'real_rgb_aligned/' + obj + '/' + key + '.png', rgb_aligned * mask3)
-        np.save(open(dataset_path + 'sim_depth_aligned/' + obj + '/' + key + '.npy', 'wb'), depth_aligned * mask)
+        cv2.imwrite(dataset_path + 'real_rgb_aligned/' + obj + '/' + key + '.png', rgb_aligned * mask3)
+        np.save(open(dataset_path + 'sim_depth_aligned/' + obj + '/' + key + '.npy', 'wb'), depth * mask)
 
     # show
     for obj in objects:

@@ -2,59 +2,90 @@ import os
 import numpy as np
 import cv2
 
-from experimental_setup.geltip.sim_model.model import SimulationModel
-from experimental_setup.geltip.sim_model.scripts.utils.camera import circle_mask
+from sim_model import SimulationModel
+from sim_model import circle_mask
 
 
 def main():
-    from experimental_setup.geltip.sim_model.scripts.utils.vis import show_panel
-    fields_size = (160, 120)
-    sim_size = (640, 480)
+    fields_size = (120, 160)
+    sim_size = (480, 640)
 
-    mask = circle_mask(sim_size)
-    mask3 = np.stack([mask, mask, mask], axis=2)
-    bkg_zeros = np.zeros(sim_size[::-1] + (3,), dtype=np.float32)
-
-    dataset_path = os.path.dirname(os.path.abspath(__file__)) + '/../dataset/'
-    assets_path = os.path.dirname(os.path.abspath(__file__)) + '/../../experimental_setup/geltip/sim_model/assets/'
-
-    cloud, linear_light_fields = SimulationModel.load_assets(assets_path, fields_size, sim_size, 'linear', 3)
-    _, geodesic_light_fields = SimulationModel.load_assets(assets_path, fields_size, sim_size, 'geodesic', 3)
-    _, rgeodesic_light_fields = SimulationModel.load_assets(assets_path, fields_size, sim_size, 'rgeodesic', 3)
-
-    light_coeffs = [
-        {'color': [196, 94, 255], 'id': 0.5, 'is': 0.1},  # red # [108, 82, 255]
-        {'color': [154, 144, 255], 'id': 0.5, 'is': 0.1},  # green # [255, 130, 115]
-        {'color': [104, 175, 255], 'id': 0.5, 'is': 0.1},  # blue  # [120, 255, 153]
-    ]
-
-    light_sources = {
-        'linear': [{'field': linear_light_fields[l], **light_coeffs[l]} for l in range(3)],
-        'geodesic': [{'field': geodesic_light_fields[l], **light_coeffs[l]} for l in range(3)],
-        'rgeodesic': [{'field': rgeodesic_light_fields[l], **light_coeffs[l]} for l in range(3)],
-    }
-    light_sources['combined'] = light_sources['linear'] + light_sources['geodesic']
+    n_fields = 3
+    field_names = [
+        'linear',
+        'plane',
+        # 'geodesic',
+        'transport',
+        # 'rlinear',
+        # 'rplane',
+        # 'rgeodesic',
+        # 'rtransport'
+    ]  # all fields
 
     objects = ['cone', 'sphere', 'random', 'cylinder', 'cylinder_shell', 'pacman', 'dot_in', 'dots']
-    # fields = ['linear', 'geodesic', 'combined']
-    fields = ['rgeodesic']
+    # objects = ['pacman']
+    fields = ['transport']  # that actually are going to be generated
+    # fields = field_names  # compute all.
 
     N_ROWS = 3
     N_CONTACTS = 6
 
+    mask = circle_mask(sim_size[::-1])
+    mask3 = np.stack([mask, mask, mask], axis=2)
+    bkg_solid = np.ones(sim_size + (3,), dtype=np.float32) * np.array([[[0.6, 0.50, 0.96]]])
+
+    dataset_path = os.path.dirname(os.path.abspath(__file__)) + '/../dataset/'
+    assets_path = os.path.dirname(os.path.abspath(__file__)) + '/../../experimental_setup/geltip/sim_model/assets/'
+
+    assets = {n: SimulationModel.load_assets(assets_path, fields_size, sim_size[::-1], n, n_fields) for n in
+              field_names}
+
+    light_coeffs = [
+        {'color': [87, 159, 233], 'id': 0.8, 'is': 0.05},  # blue
+        {'color': [197, 226, 241], 'id': 0.4, 'is': 0.05},  # green
+        {'color': [196, 94, 255], 'id': 0.8, 'is': 0.05},  # red
+        # {'color': [104, 175, 255], 'id': 0.8, 'is': 0.1},  # blue  # [120, 255, 153]
+        # {'color': [154, 144, 255], 'id': 0.5, 'is': 0.1},  # green # [255, 130, 115]
+        # {'color': [196, 94, 255], 'id': 0.8, 'is': 0.1},  # red # [108, 82, 255]
+    ]
+
+    light_sources = {
+        n: [
+            {'field': assets[n][1][l], **light_coeffs[l]} for l in range(len(light_coeffs))
+        ] for n in field_names
+    }
+    # light_sources['combined'] = light_sources['linear'] + light_sources['geodesic']
+    cloud = assets['linear'][0]
+
     for field in fields:
-        for obj in objects:
-            bkg_rgb = (cv2.cvtColor(
-                cv2.imread(dataset_path + 'real_rgb_aligned/' + obj + '/bkg.png'),
-                cv2.COLOR_BGR2RGB)) * mask3 / 225.0
-            for elastic_deformation in [False, True]:
-                for use_bkg_rgb in [True, False]:
-                    bkg = bkg_rgb if use_bkg_rgb else bkg_zeros
+        for elastic_deformation in [True]:
+
+            for use_bkg_rgb in [True, False]:
+
+                set_name = 'sim_' \
+                           + field \
+                           + ('_elastic' if elastic_deformation else '') \
+                           + ('_bkg' if use_bkg_rgb else '')
+
+                if not os.path.exists(dataset_path + set_name):
+                    os.mkdir(dataset_path + set_name)
+                    [os.mkdir(dataset_path + set_name + '/' + obj) for obj in objects]
+
+                for obj in objects:
+
+                    if use_bkg_rgb:
+                        bkg_bgr = cv2.imread(dataset_path + 'real_rgb_aligned/' + obj + '/bkg.png')
+                        bkg_rgb = cv2.cvtColor(bkg_bgr, cv2.COLOR_BGR2RGB)
+                        bkg_rgb = bkg_rgb * mask3 / 225.0
+                        bkg = bkg_rgb
+                    else:
+                        bkg = bkg_solid
 
                     print('generating image using the field: ', field, ' for ', obj)
 
                     model = SimulationModel(**{
                         'ia': 0.8,
+                        'fov': 90,
                         'light_sources': light_sources[field],
                         'background_depth': np.load(assets_path + 'bkg.npy'),
                         'cloud_map': cloud,
@@ -86,12 +117,7 @@ def main():
                             #     ],
                             #     (1, 2))
 
-                            filename = dataset_path + 'sim_' \
-                                       + field \
-                                       + ('_elastic' if elastic_deformation else '') \
-                                       + ('_bkg' if use_bkg_rgb else '') \
-                                       + '/' + obj + '/' + str(i) + '_' + str(
-                                j) + '.png'
+                            filename = dataset_path + set_name + '/' + obj + '/' + str(i) + '_' + str(j) + '.png'
                             cv2.imwrite(filename, cv2.cvtColor(rgb, cv2.COLOR_BGR2RGB) * mask3)
                             print('saving: ' + filename)
                         # except Exception:

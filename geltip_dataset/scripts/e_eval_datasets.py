@@ -2,12 +2,10 @@ from skimage.metrics import structural_similarity as ssim
 from skimage.metrics import peak_signal_noise_ratio as psnr
 
 import numpy as np
-import cv2
 import os
 import cv2
 
-from experimental_setup.geltip.sim_model.scripts.utils.camera import circle_mask
-from experimental_setup.geltip.sim_model.scripts.utils.vis import show_panel
+from sim_model import circle_mask
 
 
 def rectified_mae_loss(true, test):
@@ -27,7 +25,7 @@ def rectified_mae_loss(true, test):
 # -1 to 1, 1 means the images are identical
 def ssim_loss(true, test):
     assert true.shape[0] == test.shape[0], "True and Test batches must have the same shape."
-    losses = [ssim(true[i], test[i], multichannel=True) for i in range(true.shape[0])]
+    losses = [ssim(true[i], test[i], channel_axis=2) for i in range(true.shape[0])]
     return sum(losses) / true.shape[0]
 
 
@@ -47,10 +45,12 @@ def main():
     dataset_path = os.path.dirname(os.path.abspath(__file__)) + '/../dataset/'
 
     objects = ['cone', 'sphere', 'random', 'cylinder', 'cylinder_shell', 'pacman', 'dot_in', 'dots']
-    fields = ['linear', 'geodesic', 'combined',
-              'linear_elastic', 'geodesic_elastic', 'combined_elastic',
-              'linear_bkg', 'geodesic_bkg', 'combined_bkg',
-              'linear_elastic_bkg', 'geodesic_elastic_bkg', 'combined_elastic_bkg']
+    field_names = ['linear', 'plane', 'geodesic', 'transport']
+    # field_names = ['plane']
+    fields = [
+        f'{n}{"_elastic" if elastic else ""}{"_bkg" if bkg else ""}'
+        for n in field_names for elastic in [True] for bkg in [True, False]
+    ]
 
     N_ROWS = 3
     N_CONTACTS = 6
@@ -91,7 +91,7 @@ def main():
         print(field + ' (ssim): ' + "{:.3f}".format(ssim_err))
         print(field + ' (psnr): ' + "{:.3f}".format(psnr_err))
 
-            # show_panel([real_img, sim], (1, 2))
+        # show_panel([real_img, sim], (1, 2))
 
 
 if __name__ == '__main__':

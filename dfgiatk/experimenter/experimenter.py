@@ -5,6 +5,8 @@ import os
 import shutil
 import sys, subprocess
 
+import __main__
+
 
 # def experiment(description, config, event_listeners=None):
 #     event_listeners = event_listeners or []
@@ -66,27 +68,36 @@ class E:
 e = E()
 
 
-def check_experiment_exists(description, append):
-    workspace_path = os.getcwd()
-    outputs_path = workspace_path + '/outputs/'
-    experiment_dirs = os.listdir(outputs_path)
-
-    for e_dir in experiment_dirs:
-        f = open(outputs_path + e_dir + "/readme.md", "r")
-        if description == f.read():
-            if append:
-                return e_dir
+def check_experiment_exists(key, description, tmp, append):
+    outputs_path = ('/tmp/e' if tmp else os.getcwd()) + '/outputs/'
+    e_dir = outputs_path + key
+    # experiment_dirs = os.listdir(outputs_path)
+    if append:
+        return True
+    if os.path.exists(e_dir):
+        if tmp:
+            shutil.rmtree(e_dir)
+        else:
+            print('\n\n---')
+            print(description)
+            print('---')
+            print(e_dir)
+            print('Already exists. DELETE EXPERIMENT ? [Y/n]')
+            if input() == 'Y':
+                shutil.rmtree(e_dir)
+                print('done.')
             else:
-                print('')
-                print('---')
-                print(description)
-                print('---')
-                print('Already exists. DELETE EXPERIMENT ? [Y/n]')
-                if input() == 'Y':
-                    shutil.rmtree(outputs_path + e_dir)
-                    print('done.')
-                else:
-                    return False
+                return False
+
+    # for e_dir in experiment_dirs:
+    #     f = open(outputs_path + e_dir + "/readme.md", "r")
+    #     if description == f.read():
+    #         if append:
+    #             return e_dir
+    #         elif tmp:
+    #             shutil.rmtree(outputs_path + e_dir)
+    #         else:
+
     return True
 
 
@@ -96,39 +107,62 @@ def run(description=None, entry=None, config=None, src=None, listeners=None, app
     src = src or 'src'
 
     description = description
+    # key = description.strip().split('\n')[0][0:120].replace('#', '').replace('.', '').strip()
+    key = os.path.basename(__main__.__file__).split('.')[0]
     event_listeners = listeners or (lambda: [])
 
-    dt = check_experiment_exists(description.strip(), append)
-    if not dt:
-        return
-
-    # calculates YYYYMMDDHHMM string
-    currentDT = datetime.datetime.strptime(dt, "%Y-%m-%d %H:%M:%S") \
-        if append and dt is not True else datetime.datetime.now()
-    workspace_path = '/tmp' if tmp else os.getcwd() + '/'
-    experiment_key = currentDT.strftime("%Y-%m-%d %H:%M:%S")
-    outputs_path = workspace_path + '/outputs/'
-    experiment_path = outputs_path + experiment_key + '/'
+    workspace_path = os.getcwd() + '/'
+    outputs_path = ('/tmp/e' if tmp else os.getcwd()) + '/outputs/'
     config['__ws__'] = workspace_path
-    config['__out__'] = experiment_path + '/out'
+
+    # ensure tmp folder for experimenter exists, if tmp experiment
+    # if tmp and not os.path.exists(workspace_path):
+    #     os.mkdir(workspace_path)
+
     # ensure experiments outputs folder exists
-    if not os.path.isdir(outputs_path):
-        raise Exception("The outputs folder for the current working dir does not exist (or isn't a folder).")
+    if not os.path.exists(outputs_path):
+        os.mkdir(outputs_path)
 
-    if not (append and dt is not True):
-        # create current experiment folder
+    # if not check_experiment_exists(key, description, tmp, append):
+    #     return
+
+    experiment_key = key
+    experiment_path = outputs_path + experiment_key + '/'
+    if not os.path.exists(experiment_path):
         os.mkdir(experiment_path)
-        os.mkdir(config['__out__'])
 
-        f = open(experiment_path + "/readme.md", "w+")
-        f.write(description.strip())
-        f.close()
+    runs_path = experiment_path + '/runs/'
 
-        f = open(experiment_path + "/~running", "w+")
-        f.close()
+    if not os.path.exists(runs_path):
+        os.mkdir(runs_path)
 
-        # copy src folder
-        shutil.copytree(workspace_path + src, experiment_path + src)
+    currentDT = datetime.datetime.now()
+    run_key = currentDT.strftime("%Y-%m-%d %H:%M:%S")
+    run_path = runs_path + run_key + '/'
+    os.mkdir(run_path)
+    config['__out__'] = run_path + '/out/'
+    config['__src__'] = run_path + '/src/'
+    os.mkdir(config['__out__'])
+    os.mkdir(config['__src__'])
+
+    #
+    # calculates YYYYMMDDHHMM string
+    # currentDT = datetime.datetime.strptime(dt, "%Y-%m-%d %H:%M:%S") \
+    #     if append and dt is not True else datetime.datetime.now()
+
+    # if not (append and dt is not True):
+    # create current experiment folder
+
+    f = open(run_path + "/readme.md", "w+")
+    f.write(description.strip())
+    f.close()
+
+    f = open(run_path + "/~running", "w+")
+    f.close()
+
+    # copy src folder
+    # shutil.copytree(workspace_path + src, experiment_path + src)
+    shutil.copy(os.path.abspath(__main__.__file__), config['__src__'] + os.path.basename(__main__.__file__))
 
     # open folder
     if open_e:
@@ -138,9 +172,15 @@ def run(description=None, entry=None, config=None, src=None, listeners=None, app
     e.push_config(config, event_listeners)
     entry()
 
-    if not (append and dt is not True):
-        # remove /~running file
-        os.remove(experiment_path + "/~running")
+    # if not (append and dt is not True):
+    # remove /~running file
+    os.remove(run_path + "/~running")
+
+    latest_run_path = experiment_path + '/latest'
+    if os.path.exists(latest_run_path):
+        os.unlink(latest_run_path)
+
+    os.symlink(run_path, latest_run_path)
 
     e.emit('e_end')
 

@@ -4,124 +4,81 @@ from yarok.platforms.mjc import InterfaceMJC
 import numpy as np
 import cv2
 import os
-import open3d as o3d
-
-import math
 
 from time import time
 
+from sim_model.model import SimulationModel
+from sim_model.utils.camera import circle_mask
 
-def get_camera_matrix(img_size, fov_deg=70):
-    img_width, img_height = img_size
+__location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
 
-    fov = math.radians(fov_deg)
-    f = img_height / (2 * math.tan(fov / 2))
-    cx = (img_width - 1) / 2
-    cy = (img_height - 1) / 2
-
-    return o3d.camera.PinholeCameraIntrinsic(img_width, img_height, f, f, cx, cy)
-
-
-def get_cloud_from_depth(cam_matrix, depth):
-    o3d_depth = o3d.geometry.Image(depth)
-    o3d_cloud = o3d.geometry.PointCloud.create_from_depth_image(o3d_depth, cam_matrix)
-    return o3d_cloud
-
-
-@interface()
+@interface(
+    defaults={
+        'frame_size': (480, 640),
+        'field_size': (120, 160),
+        'field_name': 'geodesic',
+        'elastic_deformation': True,
+        'texture_sigma': 0.000005,
+        'ia': 0.8,
+        'fov': 90,
+        'light_constants': [
+            {'color': [196, 94, 255], 'id': 0.5, 'is': 0.1},  # red # [108, 82, 255]
+            {'color': [154, 144, 255], 'id': 0.5, 'is': 0.1},  # green # [255, 130, 115]
+            {'color': [104, 175, 255], 'id': 0.5, 'is': 0.1},  # blue  # [120, 255, 153]
+        ],
+    }
+)
 class GelTipInterfaceMJC:
 
-    def __init__(self, interface: InterfaceMJC):
-        self.interface = interface
-        self.raw_depth = np.zeros((480, 640))
-        self.tactile_rgb = np.zeros((480, 640))
-        self.last_update = 0
+    def __init__(self,
+                 interface_mjc: InterfaceMJC,
+                 config: ConfigBlock):
+        self.interface = interface_mjc
+        self.frame_size = config['frame_size']
+        self.mask = circle_mask(self.frame_size)
+        n_lights = len(config['light_constants'])
 
-        base = os.path.dirname(__file__) + '/simulation_model'
+        bkg_zeros = np.zeros(self.frame_size[::-1] + (3,), dtype=np.float32)
 
-        cloud_size = (160, 120)
-        method = 'geo'
-        prefix = str(cloud_size[0]) + 'x' + str(cloud_size[1])
-
-        return
-
-        cloud = np.load(base + '/fields/' + prefix + '_ref_cloud.npy')
-        cloud = cloud.reshape((cloud_size[1], cloud_size[0], 3))
-        cloud = cv2.resize(cloud, (640, 480))
-
-        normals = np.load(base + '/fields/' + prefix + '_surface_normals.npy')
-        normals = normals.reshape((cloud_size[1], cloud_size[0], 3))
-        normals = cv2.resize(normals, (640, 480))
-
-        light_fields = [
-            normalize_vectors(
-                cv2.GaussianBlur(
-                    cv2.resize(np.load(base + '/fields/' + method + '_' + prefix + '_field_ ' + str(l) + '.npy')
-                               .astype(np.float64), (640, 480))
-                    , (15, 15), cv2.BORDER_DEFAULT)
+        try:
+            cloud, fields = SimulationModel.load_assets(
+                os.path.join(__location__, '../../sim_model/assets/'),
+                config['field_size'],
+                self.frame_size,
+                config['field_name'],
+                n_lights
             )
-            for l in range(3)
-        ]
 
-        self.approach = SimulationApproach(**{
-            'light_sources': [
-                {'field': light_fields[0], 'color': [108, 82, 255], 'kd': 0.1, 'ks': 0.9},
-                {'field': light_fields[1], 'color': [255, 130, 115], 'kd': 0.1, 'ks': 0.9},
-                {'field': light_fields[2], 'color': [120, 255, 153], 'kd': 0.1, 'ks': 0.9},
-            ],
-            'cloud_map': cloud,
-            'normals': normals,
-            'background_img': cv2.imread(base + '/bkg.jpg'),
-            'ka': 0.8,
-            'px2m_ratio': 5.4347826087e-05,
-            'elastomer_thickness': 0.004,
-            'min_depth': 0.026,
-            'texture_sigma': 0.000002
-        })
-
-        self.cam_matrix = get_camera_matrix((640, 480))
-
-    def _read(self):
-        rgb, depth = self.interface.read_camera('camera', (480, 640), depth=True, rgb=True)
-        self.raw_rgb = rgb
-        self.raw_depth = depth
+            self.model = SimulationModel(**{
+                'ia': config['ia'],
+                'fov': config['fov'],
+                'light_sources': [{
+                    'field': fields[l],
+                    **config['light_constants'][l]}
+                    for l in range(n_lights)
+                ],
+                'background_depth': np.zeros(self.frame_size),
+                'cloud_map': cloud,
+                'background_img': bkg_zeros,  # bkg_rgb if use_bkg_rgb else
+                'texture_sigma': config['texture_sigma'],
+                'elastic_deformation': config['elastic_deformation']
+            })
+            self.last_update = 0
+        except:
+            print('[warning] failed to load simulation model')
 
     def read(self):
-        self._read()
-
         t = time()
-        if self.last_update > t - 0.1:
-            return self.raw_depth
-
+        if self.last_update > t - 1.0:
+            return self.tactile
         self.last_update = t
-        self.raw_rgb = rgb
-        self.raw_depth = depth
-
-        # print(self.raw_depth.shape)
-        # self.raw_depth = frame[1]
-        return self.raw_depth
-
-        o3d_cloud = get_cloud_from_depth(self.cam_matrix, self.raw_depth * 10)
-        o3d_cloud_raw_pts = np.asarray(o3d_cloud.points)
-        # print(o3d_cloud_raw_pts.shape)
-        # print(self.raw_depth.shape, o3d_cloud_raw_pts.shape[0], 480 * 640)
-
-        # print('--> ', o3d_cloud_raw_pts.shape[0])
-        if o3d_cloud_raw_pts.shape[0] != 480 * 640:
-            print('SKIP!')
-            return self.raw_depth
-
-        depth = o3d_cloud_raw_pts.reshape((480, 640, 3)) / 10
-
-        # if o3d_cloud_raw_pts.shape[0] == 480 * 640:
-        self.tactile_rgb = self.approach.generate(depth)
-
-        # self.tactile_rgb = frame[0]
-        return self.tactile_rgb
+        depth = self.read_depth()
+        self.tactile = self.model.generate(depth) \
+            .astype(np.uint8)
+        return self.tactile
 
     def read_depth(self):
-        self._read()
-        return self.raw_depth
+        return self.interface.read_camera('camera', self.frame_size, depth=True, rgb=False)
 
 
 @interface()
@@ -149,6 +106,7 @@ class GelTipInterfaceHW:
         'interface_mjc': GelTipInterfaceMJC,
         'interface_hw': GelTipInterfaceHW,
         'probe': lambda c: {'camera': c.read()},
+        'label_color': '255 255 255'
     },
     # language=xml
     template="""
@@ -172,7 +130,7 @@ class GelTipInterfaceHW:
                 
                 <!-- inverted mesh, for limiting the depth map-->
                 <!-- changing this mesh changes the depth maps -->
-                <mesh name="geltip_elastomer_inv" file="meshes/elastomer_long_inv.stl" scale="0.00105 0.00105 0.00105"/>
+                <mesh name="geltip_elastomer_inv" file="meshes/elastomer_very_long_voxel_e-6_inv.stl" scale="0.001 0.001 0.001"/>
         
             </asset>
             <worldbody>
@@ -185,36 +143,35 @@ class GelTipInterfaceHW:
                     <geom density="0.1" type="mesh" mesh="geltip_shell" material="black_plastic"/>
                     <geom density="0.1" type="mesh" mesh="geltip_sleeve" material="black_plastic"/>
                     <geom density="0.1" type="mesh" mesh="geltip_mount" material="black_plastic"/>
-                    <camera name="camera" pos="0 0 0.01" zaxis="0 0 -1" fovy="70"/>
+                    <camera name="camera" pos="0 0 0.01" zaxis="0 0 -1" fovy="90"/>
                     <body>
                     
                        <!-- mesh, to serve as the glass and detect collisions -->
-                       <geom density="0.1" type="mesh" 
+                       <!-- <geom density="0.1" type="mesh" 
                               mesh="geltip_glass" 
                               pos="0.0 0.0 -0.003"
                               solimp="1.0 1.2 0.001 0.5 2" 
                               solref="0.02 1"
-                              material="glass_material" /> 
+                              material="glass_material" /> -->
                               
                        <!-- inverted, mesh, for limiting the depth-map -->
                        <!-- changing this geom/mesh changes the depth maps -->
-                       <!-- 32 for contype and conaffinity disable collisions -->     
+                       <!-- 32 for contype and conaffinity disables collisions -->     
                        <geom  type="mesh" 
                               mesh="geltip_elastomer_inv" 
                               contype="32"  
                               conaffinity="32" 
-                              pos="0.0 0.0 -0.005"
-                              material="white_elastomer" />
+                              material="white_elastomer" /> 
                        
                        <!-- white elastomer, for visual purposes -->
-                       <geom density="0.1" 
+                       <!-- <geom density="0.1" 
                               type="mesh" 
                               mesh="geltip_elastomer" 
                               friction="1 0.05 0.01" 
                               contype="32" 
                               conaffinity="32" 
                               pos="0.0 0.0 -0.007"
-                              material="white_elastomer"/>
+                              material="white_elastomer"/> -->
                     </body>
         
                 </body>
@@ -229,7 +186,6 @@ class GelTip:
             Geltip driver as proposed in
             https://danfergo.github.io/geltip-simulation/
 
-            The frame method gets the depth map from the simula
         """
         pass
 

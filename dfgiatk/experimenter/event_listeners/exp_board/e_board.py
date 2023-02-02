@@ -133,5 +133,5 @@ class EBoard:
         assign('epoch', ev['epoch'])
 
     def on_e_end(self, ev):
-        self.server.server_close()
+        self.server.shutdown()
         self.thread.join()

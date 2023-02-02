@@ -2,6 +2,11 @@ from yarok import ConfigBlock, component, interface
 from yarok.platforms.mjc import InterfaceMJC
 
 import serial
+import time
+
+
+def sae(q1, q2):
+    return sum([abs(q1[i] - q2[i]) for i in range(len(q1))])
 
 
 @interface()
@@ -9,10 +14,19 @@ class AnetA30InterfaceMJC:
 
     def __init__(self, interface: InterfaceMJC):
         self.interface = interface
-        self.gear = 100
+        self.gear = 50
         self.MAX_X = 320
         self.MAX_Y = 320
         self.MAX_Z = 420
+        self.actuators = ['ax', 'ay', 'az']
+        self.stopped_steps = 0
+        self.speed = 10.0
+        self.start_t = time.time()
+        self.delta_t = 0
+        self.p = [0, 0, 0]
+        self.last_p = None
+        self.start_p = None
+        self.target_p = self.p
 
         # includes gear ratio and millimeters to meters conversion.
         self.mm2ctrl = self.gear / 1000.0
@@ -24,34 +38,52 @@ class AnetA30InterfaceMJC:
         pass
 
     def move(self, p):
-        x, y, z = [
-            max(0, min(p[0], self.MAX_X)),
-            max(0, min(p[1], self.MAX_Y)),
-            max(0, min(p[2], self.MAX_Z))
+        self.start_p = self.target_p
+        self.target_p = [
+            max(0, min(p[0], self.MAX_X)) * self.mm2ctrl,
+            max(0, min(p[1], self.MAX_Y)) * self.mm2ctrl,
+            max(0, min(p[2], self.MAX_Z)) * self.mm2ctrl
         ]
-
-        self.interface.set_ctrl('ax', x * self.mm2ctrl)
-        self.interface.set_ctrl('ay', y * self.mm2ctrl)
-        self.interface.set_ctrl('az', z * self.mm2ctrl)
+        self.start_t = time.time()
+        self.delta_t = max([abs(self.target_p[i] - self.start_p[i]) / self.speed for i in range(3)])
+        return lambda: self.is_at(p)
 
     def is_at(self, position):
         sensor_data = [d / self.mm2ctrl for d in self.interface.sensordata()]
-        # print(sum([abs(position[i] - sensor_data[i]) for i in range(3)]))
-        return sum([abs(position[i] - sensor_data[i]) for i in range(3)]) < 0.25  # 0.25 mm
+
+        return self.stopped_steps > 10 and \
+               sum([abs(position[i] - sensor_data[i]) for i in range(3)]) < 0.25  # 0.25 mm
 
     def step(self):
-        pass
+        self.last_p = self.p
+        self.p = [d / self.mm2ctrl for d in self.interface.sensordata()]
+        now = time.time()
+
+        if self.start_p is not None:
+            elapsed = (now - self.start_t)
+            progress = min(1, elapsed / self.delta_t) if self.delta_t > 0 else 1
+            target = [(1 - progress) * self.start_p[i] + progress * self.target_p[i] for i in range(3)]
+        else:
+            target = self.target_p
+
+        [self.interface.set_ctrl(a, target[a]) for a in range(len(self.interface.actuators))]
+
+        if sae(self.last_p, self.p) < 1e-6:
+            self.stopped_steps += 1
+        else:
+            self.stopped_steps = 0
 
 
 @interface(
     defaults={
-        'serial_path': '/dev/ttyUSB0'
+        'serial_path': '/dev/ttyUSB0',
+        'serial_port': 115200
     }
 )
 class AnetA30InterfaceHW:
 
     def __init__(self, config: ConfigBlock):
-        self.ser_con = serial.Serial(config['serial_path'], 115200, timeout=1)
+        self.ser_con = serial.Serial(config['serial_path'], config['serial_port'], timeout=1)
 
         self.MAX_X = 320
         self.MAX_Y = 320
@@ -179,8 +211,8 @@ class AnetA30InterfaceHW:
 
                 <joint name="zaxis"
                        type="slide"
-                       armature="1000"
-                       frictionloss="1000"
+                       stiffness='50'
+                       damping='100'
                        axis="0 0 1"/>
 
                 <geom type="mesh"
@@ -193,8 +225,8 @@ class AnetA30InterfaceHW:
                 <body name="xaxis_body">
                     <joint name="xaxis"
                            type="slide"
-                           armature="1000"
-                           frictionloss="1000"
+                           stiffness='50'
+                           damping='100'
                            axis="1 0 0"/>
 
                     <!-- printer head-->
@@ -216,8 +248,8 @@ class AnetA30InterfaceHW:
             <body name="printer_bed" pos="0 0 0.08">
                 <joint name="yaxis"
                        type="slide"
-                       armature="1000"
-                       frictionloss="1000"
+                       stiffness='50'
+                       damping='100'
                        axis="0 -1 0"/>
 
                 <!-- area/size of the real printer bed -->
@@ -237,9 +269,9 @@ class AnetA30InterfaceHW:
         </body>
     </worldbody>
     <actuator>
-        <position name="ax" gear="100" joint="xaxis" forcelimited="true" forcerange="-10000 10000" kp='100'/>
-        <position name="ay" gear="100" joint="yaxis" forcelimited="true" forcerange="-10000 10000" kp='100'/>
-        <position name="az" gear="100" joint="zaxis" forcelimited="true" forcerange="-10000 10000" kp='100'/>
+        <position name="ax" gear="50" joint="xaxis" forcelimited="true" forcerange="-500 500" kp='50'/>
+        <position name="ay" gear="50" joint="yaxis" forcelimited="true" forcerange="-500 500" kp='50'/>
+        <position name="az" gear="50" joint="zaxis" forcelimited="true" forcerange="-500 500" kp='50'/>
     </actuator>
     <sensor>
         <actuatorpos name="x" actuator="ax"/>

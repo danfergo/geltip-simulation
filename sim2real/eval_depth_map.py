@@ -47,13 +47,12 @@ def eval_dataset():
             y_pred_np[y_pred_np > 1.0] = 1.0
             y_pred_np[y_pred_np < 0.0] = 0.0
             pred = y_true_np[0][..., 0]
-            print(np.max(pred), np.min(pred), pred.dtype)
-
+            # print(np.max(pred), np.min(pred), pred.dtype)
             # print(.shape)
             # print(y_pred_np[0][..., 0].shape)
             # print('---------')Y
             # print(x.size()[0])
-            print('---------')
+            # print('---------')
 
             for i in range(x.size()[0]):
                 x_np[i] = cv2.cvtColor(x_np[i], cv2.COLOR_BGR2RGB)
