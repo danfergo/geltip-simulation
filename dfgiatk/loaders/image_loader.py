@@ -45,7 +45,7 @@ class ClassificationLabeler(Labeler):
         self.classes = list({self.get_class(s): 1 for s in samples}.keys())
         self.classes.sort()
 
-        self.one_hot = False
+        self.one_hot = one_hot
 
     def get_class(self, s):
         return path.basename(path.dirname(s))
@@ -56,7 +56,6 @@ class ClassificationLabeler(Labeler):
             _1_hot = np.zeros((len(self.classes, )))
             _1_hot[idx] = 1
             return _1_hot
-
         return np.array(idx)
 
 
@@ -111,7 +110,8 @@ class DatasetSampler(torch.utils.data.IterableDataset):
                  epoch_size=1,
                  batch_size=32,
                  random_sampling=True,
-                 return_names=False):
+                 return_names=False,
+                 device='cuda'):
         super(DatasetSampler).__init__()
 
         self.batch_size = batch_size or len(samples)
@@ -121,6 +121,7 @@ class DatasetSampler(torch.utils.data.IterableDataset):
         self.samples = samples
         self.random_sampling = random_sampling
         self.return_names = return_names
+        self.device = device
 
     def get_sample(self, i):
         # Get random sample
@@ -144,8 +145,9 @@ class DatasetSampler(torch.utils.data.IterableDataset):
         y_true = torch.from_numpy(ys)
 
         if self.return_names:
-            return x.to('cuda'), y_true.to('cuda'), samples
-        return x.to('cuda'), y_true.to('cuda')
+            return x.to(self.device), y_true.to(self.device), samples
+
+        return x.to(self.device), y_true.to(self.device)
 
     def __iter__(self):
         self.it = 0
@@ -161,7 +163,7 @@ class DatasetSampler(torch.utils.data.IterableDataset):
 
     @staticmethod
     def load_from_yaml(yaml_path, prepend_path=None):
-        return [path.join(prepend_path, s) if prepend_path is not None else s
+        return [(path.join(prepend_path, s) if prepend_path is not None else s)
                 for s in yaml.full_load(open(yaml_path))]
 
 

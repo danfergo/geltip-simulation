@@ -121,6 +121,8 @@ def run(description=None, entry=None, config=None, src=None, listeners=None, app
 
     # ensure experiments outputs folder exists
     if not os.path.exists(outputs_path):
+        if not os.path.exists('/tmp/e'):
+            os.mkdir('/tmp/e')
         os.mkdir(outputs_path)
 
     # if not check_experiment_exists(key, description, tmp, append):

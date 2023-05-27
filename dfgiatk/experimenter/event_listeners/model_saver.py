@@ -13,10 +13,12 @@ class ModelSaver:
         torch.save(self.model.state_dict(), e.out(name))
 
     def on_epoch_end(self):
-        self.save_model('latest_model')
+        pass
 
     def on_validation_end(self, ev):
         loss = ev['history']['val']['loss']
         if self.latest_loss is None or loss < self.latest_loss:
             self.latest_loss = loss
             self.save_model('best_model')
+
+        self.save_model('latest_model')

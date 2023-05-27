@@ -24,6 +24,14 @@ from sim_model.utils.vis_img import to_normed_rgb, to_panel
                 <texture name="texplane" type="2d" builtin="checker" rgb1=".2 .3 .4" rgb2=".1 0.15 0.2"
                          width="512" height="512" mark="cross" markrgb=".8 .8 .8"/>    
                 <material name="matplane" reflectance="0.3" texture="texplane" texrepeat="1 1" texuniform="true"/>
+
+                <!-- <texture type="heightfield" file="heightmap.png"/> 
+                <material name="matplane" reflectance="0.3" texture="texplane" texrepeat="1 1" texuniform="true"/>
+                -->
+                <texture name="grid" type="2d" builtin="checker" width="512" height="512" rgb2="0 0 0" rgb1="1 1 1"/>
+                <material name="grid" texture="grid" texrepeat="2 2" texuniform="true" reflectance=".6"/>
+                <hfield name="terrain" file="heightmap.png" size="0.01 0.01 0.001 0.01"/>
+
             </asset>
             <worldbody>
                 <light directional="true" diffuse=".4 .4 .4" specular="0.1 0.1 0.1" pos="0 0 5.0" dir="0 0 -1"/>
@@ -41,6 +49,14 @@ from sim_model.utils.vis_img import to_normed_rgb, to_panel
                         rgba='255 0 0 1'
                         size='0.02 0.02 0.02'/>
                 </body> -->
+
+               <geom name="groundxx" type="hfield" hfield="#1:terrain" size="1 1 .1" pos="0 0.04 0.0885" material="grid"/>
+
+                <!--<body name="ground">
+                    <geom name="terrain" type="plane" material="heightfield">
+                      <size type="xyz" value="10 10 1"/>
+                    </geom>
+                  </body> -->
 
                 <body pos="0.0 0.0 0.1" xyaxes='-1 0 0 0 0 1'>
                     <geltip name="geltip1"/>
@@ -104,13 +120,14 @@ class CaptureDepthSampleBehaviour:
         with open(frame_path + '.npy', 'wb') as f:
             depth_frame = geltip.read_depth()
             np.save(f, depth_frame)
-            return depth_frame
+        return depth_frame
 
     def on_start(self):
         self.pl.wait_seconds(5)
-
+        # 'bkg' if i == 0 else 'depth_' +
         frames = [
-            to_normed_rgb(self.save_depth_frame(g, 'bkg' if i == 0 else 'depth_' + str(i)))
+
+            to_normed_rgb(self.save_depth_frame(g,  str(i)))
             for i, g in enumerate(self.sensors)
         ]
 

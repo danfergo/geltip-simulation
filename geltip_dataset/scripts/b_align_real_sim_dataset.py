@@ -2,8 +2,8 @@ import os
 import cv2
 import numpy as np
 
-from sim_model import circle_mask
-from sim_model import to_normed_rgb, show_panel
+from sim_model.utils.camera import circle_mask
+from sim_model.utils.vis_img import to_normed_rgb, show_panel
 
 
 def in_contact_mask(bkg_depth, depth):
@@ -17,63 +17,89 @@ def main():
     dataset_path = os.path.dirname(os.path.abspath(__file__)) + '/../dataset/'
     assets_path = os.path.dirname(os.path.abspath(__file__)) + '/../../experimental_setup/geltip/sim_model/assets/'
 
-    objects = ['cone', 'sphere', 'random', 'cylinder', 'cylinder_shell', 'pacman', 'dot_in', 'dots']
+    objects = [
+        'cone',
+        'sphere',
+        'random',
+        'cylinder',
+        'cylinder_shell',
+        'pacman',
+        'dot_in',
+        'dots'
+    ]
 
     show_alignment_panel = False
-    N_ROWS = 3
-    N_CONTACTS = 6
+
+    sim_set = 'depth'
+    # sim_set = 'adepth'
+
+    set_params = {
+        # 18
+        'depth': {
+            'rows': 3,
+            'contacts': 6,
+            'align_real': True
+        },
+        # 3456
+        'adepth': {
+            'rows': 5,
+            'contacts': 576,  # 36 printers.
+            'align_real': False
+        }
+    }
 
     mask = circle_mask((640, 480))
     mask3 = np.stack([mask, mask, mask], axis=2)
 
-    if not os.path.exists(dataset_path + '/sim_depth_aligned'):
-        os.mkdir(dataset_path + '/sim_depth_aligned')
-        [os.mkdir(dataset_path + '/sim_depth_aligned' + '/' + obj) for obj in objects]
+    if not os.path.exists(f'{dataset_path}/sim_{sim_set}_aligned'):
+        os.mkdir(f'{dataset_path}/sim_{sim_set}_aligned')
+        [os.mkdir(f'{dataset_path}/sim_{sim_set}_aligned/{obj}') for obj in objects]
 
-    def align(key):
-        bkg_depth = np.load(dataset_path + 'sim_depth/cylinder/bkg.npy')
+    def align(obj, key, align_real):
+        bkg_depth = np.load(f'{dataset_path}/sim_{sim_set}/{obj}/bkg.npy')
 
-        rgb = cv2.cvtColor(cv2.imread(dataset_path + 'real_rgb/' + obj + '/' + key + '.png'),
-                           cv2.COLOR_BGR2RGB)
-        depth = np.load(dataset_path + 'sim_depth/' + obj + '/' + key + '.npy')
+        depth = np.load(f'{dataset_path}sim_{sim_set}/{obj}/{key}.npy')
         in_contact_rgb = in_contact_mask(bkg_depth, depth)
 
+        if align_real:
+            rgb = cv2.cvtColor(cv2.imread(f'{dataset_path}/real_rgb/{obj}/{key}.png'), cv2.COLOR_BGR2RGB)
 
-        # manual alignment
-        height, width = rgb.shape[:2]
-        center = (width // 2, height // 2)
+            # manual alignment
+            height, width = rgb.shape[:2]
+            center = (width // 2, height // 2)
 
-        rotation_matrix = cv2.getRotationMatrix2D(center=center, angle=192, scale=1.15)
-        rgb_aligned = cv2.warpAffine(src=rgb, M=rotation_matrix, dsize=(width+50, height+50))
+            rotation_matrix = cv2.getRotationMatrix2D(center=center, angle=192, scale=1.15)
+            rgb_aligned = cv2.warpAffine(src=rgb, M=rotation_matrix, dsize=(width + 50, height + 50))
 
-        tx = 0.0
-        ty = -20.0
-        translation_matrix = np.array([[1.0, 0.0, tx], [0.0, 1.0, ty]])
-        rgb_aligned = cv2.warpAffine(src=rgb_aligned, M=translation_matrix, dsize=(width, height))
+            tx = 0.0
+            ty = -20.0
+            translation_matrix = np.array([[1.0, 0.0, tx], [0.0, 1.0, ty]])
+            rgb_aligned = cv2.warpAffine(src=rgb_aligned, M=translation_matrix, dsize=(width, height))
 
-        # M = cv2.matFromArray(2, 3, cv2.CV_64FC1, [1, 0, 50, 0, 1, 100]);
-        #
-        # depth_aligned = cv2.warpAffine(src=depth, M=rotation_matrix, dsize=(width, height))
+            # M = cv2.matFromArray(2, 3, cv2.CV_64FC1, [1, 0, 50, 0, 1, 100]);
+            #
+            # depth_aligned = cv2.warpAffine(src=depth, M=rotation_matrix, dsize=(width, height))
 
-        if show_alignment_panel:
-            # in_contact_rgb = to_normed_rgb(in_contact_rgb)
-            print(rgb_aligned.shape, in_contact_rgb.shape)
-            diff_aligned = (rgb_aligned * 0.5 + in_contact_rgb * 0.5).astype(np.uint8)
-            diff_aligned = cv2.circle(diff_aligned, center, 10, (0, 255, 0), 2)
-            show_panel([rgb, in_contact_rgb, rgb_aligned, diff_aligned], (2, 2))
+            if show_alignment_panel:
+                # in_contact_rgb = to_normed_rgb(in_contact_rgb)
+                # print(rgb_aligned.shape, in_contact_rgb.shape)
 
-        rgb_aligned = cv2.cvtColor(rgb_aligned, cv2.COLOR_BGR2RGB)
-        cv2.imwrite(dataset_path + 'real_rgb_aligned/' + obj + '/' + key + '.png', rgb_aligned * mask3)
-        np.save(open(dataset_path + 'sim_depth_aligned/' + obj + '/' + key + '.npy', 'wb'), depth * mask)
+                diff_aligned = (rgb_aligned * 0.5 + in_contact_rgb * 0.5).astype(np.uint8)
+                diff_aligned = cv2.circle(diff_aligned, center, 10, (0, 255, 0), 2)
+                show_panel([rgb, in_contact_rgb, rgb_aligned, diff_aligned], (2, 2))
+
+            rgb_aligned = cv2.cvtColor(rgb_aligned, cv2.COLOR_BGR2RGB)
+            # cv2.imwrite(dataset_path + 'real_rgb_aligned/' + obj + '/' + key + '.png', rgb_aligned * mask3)
+
+        np.save(open(f'{dataset_path}/sim_{sim_set}_aligned/{obj}/{key}.npy', 'wb'), depth * mask)
 
     # show
     for obj in objects:
+        align(obj, 'bkg', set_params[sim_set]['align_real'])
 
-        align('bkg')
-
-        for i in range(N_ROWS):
-            for j in range(N_CONTACTS):
-                align(str(i) + '_' + str(j))
+        for i in range(set_params[sim_set]['rows']):
+            for j in range(set_params[sim_set]['contacts']):
+                align(obj, str(i) + '_' + str(j), set_params[sim_set]['align_real'])
         print('ended ' + obj)
 
     print('ended all.')

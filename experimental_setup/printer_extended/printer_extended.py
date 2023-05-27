@@ -139,6 +139,9 @@ class PrinterExtendedInterfaceHW:
     defaults={
         'interface_mjc': PrinterExtendedInterfaceMJC,
         'interface_hw': PrinterExtendedInterfaceHW,
+        'dx': 0.0,
+        'dy': 0.0,
+        'rx': 0.0,
     },
     components=[
         AnetA30
@@ -178,7 +181,8 @@ class PrinterExtendedInterfaceHW:
                                           material="black_plastic"/>
                                     
                                     <!-- indenter -->
-                                    <body pos="0 0.0108 0" name="indenter_mount">
+                                    <!-- should be: axisangle='1 0 0 ${rx}'-->
+                                    <body pos="0 0.0108 0" name="indenter_mount" axisangle='1 0 0 0'>
                                         
                                     </body>                                      
                                 </body>
@@ -191,52 +195,56 @@ class PrinterExtendedInterfaceHW:
                                   size="0.1085 0.165 0.003"
                                   pos="0.17 0.165 0.004"
                                   rgba=".8 .68 0.5 1"/>
+                           
+                           <!-- should be:                            <body pos='${dx*0.001} ${dy*0.001} 0'>-->
+                           <body pos='0 0 0'>
                                   
                             <body pos="0.153 0.128 0.046" xyaxes="0 1 0 0 0 1">
-                                <!-- let's pretend servo -->
-                                <geom type="box"
-                                  zaxis='0 1 0'
-                                  pos="0.01 0.0 -0.065"
-                                  size=".025 .018 .0125"
-                                  material="black_plastic"/>
-                                  
-                              <!-- let's pretend servo mount -->
-                              <geom type="box"
-                                  pos="0.01 -.014 -0.065"
-                                  size=".04 .001 .0125"
-                                  material="black_metal"/>
-                              <geom type="box"
-                                  pos="0.01 -.038 -0.065"
-                                  size=".04 .001 .0125"
-                                  material="black_metal"/>
-                              <geom type="box"
-                                  zaxis='0 1 0'
-                                  pos="0.01 -.026 -0.053"
-                                  size=".04 .001 .0125"
-                                  material="black_metal"/>
-                                  
-                                
-                                <!-- plastic geltip mount -->
-                                <geom type="mesh"
-                                  pos="0 0 0.003"
-                                  mesh="geltip_printer_mount"
-                                  material="black_plastic"
-                                  friction="0.4 0.4 0.8"/>
-                                   
-                                  <!-- the mount that rotates the sensor --> 
-                                  <body name="geltip_mount">
-                                      <joint name="a2"
-                                           type="hinge"
-                                           armature="1"
-                                           damping="100"
-                                           axis="0 0 -1"/>
-                                           
-                                       <!-- lets the sim env work without sensor -->
-                                       <geom type="cylinder" 
-                                                density="0.1" 
-                                                pos="0 0 -0.045 "
-                                                size="0.01 0.001"/> 
-                                  </body>
+                                    <!-- let's pretend servo -->
+                                    <geom type="box"
+                                      zaxis='0 1 0'
+                                      pos="0.01 0.0 -0.065"
+                                      size=".025 .018 .0125"
+                                      material="black_plastic"/>
+                                      
+                                  <!-- let's pretend servo mount -->
+                                  <geom type="box"
+                                      pos="0.01 -.014 -0.065"
+                                      size=".04 .001 .0125"
+                                      material="black_metal"/>
+                                  <geom type="box"
+                                      pos="0.01 -.038 -0.065"
+                                      size=".04 .001 .0125"
+                                      material="black_metal"/>
+                                  <geom type="box"
+                                      zaxis='0 1 0'
+                                      pos="0.01 -.026 -0.053"
+                                      size=".04 .001 .0125"
+                                      material="black_metal"/>
+                                      
+                                    
+                                    <!-- plastic geltip mount -->
+                                    <geom type="mesh"
+                                      pos="0 0 0.003"
+                                      mesh="geltip_printer_mount"
+                                      material="black_plastic"
+                                      friction="0.4 0.4 0.8"/>
+                                       
+                                      <!-- the mount that rotates the sensor --> 
+                                      <body name="geltip_mount">
+                                          <joint name="a2"
+                                               type="hinge"
+                                               armature="1"
+                                               damping="100"
+                                               axis="0 0 -1"/>
+                                               
+                                           <!-- lets the sim env work without sensor -->
+                                           <geom type="cylinder" 
+                                                    density="0.1" 
+                                                    pos="0 0 -0.045 "
+                                                    size="0.01 0.001"/> 
+                                      </body>
+                                </body>
                             </body>
                     </body>
                 </anet_a30>

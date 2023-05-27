@@ -46,9 +46,9 @@ import cv2
                 </body>
 
                 <printer_extended name="printer">
+                    <!-- todo should be:   xyaxes="${obj_xyaxes}" -->
                     <geom 
                          parent="indenter_mount"
-                         xyaxes="${obj_xyaxes}"
                          type="mesh"
                          density="0.1"
                          mesh="object"
@@ -127,6 +127,7 @@ class DatasetCollectionBehaviour:
                 depth_frame = self.geltip.read_depth()
                 print('min', depth_frame.min(), 'max', depth_frame.max())
                 np.save(f, depth_frame)
+                print(input())
         else:
             cv2.imwrite(frame_path + '.png', self.geltip.read())
         print('saved ' + key)
@@ -149,7 +150,6 @@ class DatasetCollectionBehaviour:
         self.move(p, angles)
 
     def on_start(self):
-
         # move from the 0,0 / home position to a higher position,
         # so that it doesnt collide with clamps and the sensor
         # when moving to the first position
@@ -179,6 +179,7 @@ class DatasetCollectionBehaviour:
             d0x = lambda theta: cos(theta * dt)
             d0y = lambda theta: sin(theta * dt)
             rad2deg = lambda radians: round(radians * 180 / pi)
+            self.pl.wait_seconds(25)
 
             # trace curved path
             for rot in range(0, self.ROT_STEPS):
@@ -232,14 +233,14 @@ def main():
         'random': '0 1 0 -1 0 0'
     }
     objects = [
-        'cone',
+        # 'cone',
         'sphere',
-        'cylinder',
-        'cylinder_shell',
-        'dot_in',
-        'dots',
-        'pacman',
-        'random'
+        # 'cylinder',
+        # 'cylinder_shell',
+        # 'dot_in',
+        # 'dots',
+        # 'pacman',
+        # 'random'
     ]
     env = 'sim'
     save_data = True

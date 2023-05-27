@@ -57,6 +57,13 @@ def proj(u, n_):
     return u.dot(n_) * normalize(n_)
 
 
+def angle2d(a, b):
+    dot_product = np.dot(a, b)
+    norm_a = np.lianalg.norm(a)
+    norm_b = np.linalg.norm(b)
+    angle_rad = np.arccs(dot_product / (norm_a * norm_b))
+
+
 # given a set of line segments, computes the path from source to target, following the direction of v
 def sort_path(path, source, target, v, ahead=0):
     """
@@ -129,6 +136,35 @@ def translate_vector(mesh, source, target, v, n):
 
     return vi, ve, sub_path
 
+
+def rotation_matrix_from_vectors(vec1, vec2):
+    vec1_unit = vec1 / np.linalg.norm(vec1)
+    vec2_unit = vec2 / np.linalg.norm(vec2)
+    axis = np.cross(vec1_unit, vec2_unit)
+    angle = np.arccos(np.dot(vec1_unit, vec2_unit))
+    kmat = np.array([
+        [0, -axis[2], axis[1]],
+        [axis[2], 0, -axis[0]],
+        [-axis[1], axis[0], 0]
+    ])
+    rotation_matrix = (
+            np.eye(3) + kmat + np.dot(kmat, kmat) * (1 - np.cos(angle))
+    )
+    return rotation_matrix
+
+
+def angle_between(v1, v2):
+    """Returns the angle between two 2D vectors in radians."""
+    dot_product = np.dot(v1, v2)
+    norm_product = np.linalg.norm(v1) * np.linalg.norm(v2)
+    cos_theta = dot_product / norm_product
+    return np.arccos(cos_theta)
+
+def rotate_vector(v, theta):
+    """Rotates a 2D vector v by the angle theta (in radians)."""
+    R = np.array([[np.cos(theta), -np.sin(theta)],
+                  [np.sin(theta), np.cos(theta)]])
+    return np.dot(R, v)
 
 # def planes_light_field(mesh,
 #                        source_pos,
@@ -218,11 +254,11 @@ def translate_vector(mesh, source, target, v, n):
 
 def closest_vertex(m, face, p):
     i = np.argmin([dist(m.vertices[vi], p) for vi in range(len(face))])
-    return mesh.vertices[face[i]]
+    return m.vertices[face[i]]
 
 
 def closest_faces(m, P):
-    nb_faces = nearby_faces(mesh, P)
+    nb_faces = nearby_faces(m, P)
 
     def closest_face(p, nb_faces_p):
         i = np.argmin([dist(closest_vertex(m, m.faces[nb_faces_p[i]], p), p) for i in range(len(nb_faces_p))])
@@ -363,53 +399,58 @@ def compute_light_field(mesh,
 
         return field
 
-    elif method == 'transport':
-        P = cloud_map.reshape([-1, 3])  # a Nx3 numpy array of points
+    elif method == 'transport' or method == 'rtransport':
 
+        # depth-map Point-Cloud
         solver = pp3d.MeshVectorHeatSolver(mesh.vertices, mesh.faces)
 
+        # vector that we are transporting in x,y,z
+        v = np.array([0.0, 0.0, 1.0])
+
+        # vector that we are transporting in u,v
+        # projected to the mesh at the source point
         proximity_query = ProximityQuery(mesh)
         _, sourceV = proximity_query.vertex(source_pos)
-
         basisX, basisY, basisN = solver.get_tangent_frames()
-
-        v = np.array([0.0, 0.0, 1.0])
         vx = basisX[sourceV]
         vy = basisY[sourceV]
-
         v_surface = [norm(proj(v, vx)), norm(proj(v, vy))]
 
-        ext = solver.transport_tangent_vector(sourceV, v_surface)
+        if method == 'rtransport':
+            # vector transport
+            ext = solver.transport_tangent_vector(sourceV, v_surface)
 
-        ext3D = ext[:, 0, np.newaxis] * basisX + ext[:, 1, np.newaxis] * basisY
-        ext3D = map_field_vertices2points(ext3D, mesh, P)
+            print('1. rtransport')
+            ext3D = ext[:, 0, np.newaxis] * basisX + ext[:, 1, np.newaxis] * basisY
+            ext3D = map_field_vertices2points(ext3D, mesh, cloud_map.reshape([-1, 3]))
+            field = ext3D.reshape((cloud_map.shape[0], cloud_map.shape[1], 3))
 
-        field = ext3D.reshape((cloud_map.shape[0], cloud_map.shape[1], 3))
+            for i in range(cloud_map.shape[0]):
+                for j in range(cloud_map.shape[1]):
+                    if m[i, j] > 0.5:
+                        # vector at origin.
+                        lm = cloud_map[i, j] - source_pos
+                        lm /= norm(lm)
 
-        # print(basisX[sourceV], basisY[sourceV])
-        # print(v_surface)
+                        # projected vector on the surface, near origin
+                        # vv = [norm(proj(lm, vx)), norm(proj(lm, vy))]
+                        rot_matrix = rotation_matrix_from_vectors(lm, v)
 
-        # show_field(
-        #         #     cloud_map=cloud_map,
-        #         #     field=field,
-        #         #     field_color='red',
-        #         #     mesh=mesh,
-        #         #     # paths=[s_path],
-        #         #     # pts=[pt, source_pos],
-        #         #     arrows=[
-        #         #         (source_pos, np.array([0, 0, 1])),
-        #         #         # (source_pos, basisX[sourceV]),
-        #         #         # (source_pos, basisY[sourceV])
-        #         #         # (source_pos, v),
-        #         #         # (source_pos, source_pos, 'blue'),
-        #         #         # (source_pos, vi, 'green'),
-        #         #         # (pt, ve, 'blue'),
-        #         #     ]
-        #         # )
+                        # alpha = angle between vv and v
+                        # alfa = angle2d(v, vv)
 
-        # print(basisN)
+                        inv_rot_matrix = np.linalg.inv(rot_matrix)
 
-        # print(field.shape, cloud_map.shape)
+                        field[i, j] = np.dot(inv_rot_matrix, field[i, j])
+
+                        # rotate field[i,j] by alpha
+                        # print(v_surface)
+        else:
+            ext = solver.transport_tangent_vector(sourceV, v_surface)
+            ext3D = ext[:, 0, np.newaxis] * basisX + ext[:, 1, np.newaxis] * basisY
+            ext3D = map_field_vertices2points(ext3D, mesh, cloud_map.reshape([-1, 3]))
+            field = ext3D.reshape((cloud_map.shape[0], cloud_map.shape[1], 3))
+
         return field
 
 
@@ -421,8 +462,7 @@ def compute_field(method=None, cloud_size=None, field_i=None, n_processes=None, 
     cam_matrix = get_camera_matrix(depth.shape[::-1], fov_deg=90)
     cloud = depth2cloud(cam_matrix, depth)
 
-    mesh = load(assets_path + '/' + prefix + f'_aligned_mesh.stl', 'stl',
-                force='mesh')
+    mesh = load(assets_path + '/' + prefix + f'_aligned_mesh.stl', 'stl', force='mesh')
 
     led_radius = 0.012
     led_height = 0
@@ -454,10 +494,10 @@ def compute_field(method=None, cloud_size=None, field_i=None, n_processes=None, 
     print('duration hours:', str(delta / 3600))
     print(f'end computing field :{method} field:{str(field_i)} process:{"" if n_processes is None else process_i}')
 
-    if method != 'linear':
-        n = normals(cloud_map)
-        r_field = field - proj_vectors(field, n)
-        np.save(f'{assets_path}/r{method}_{prefix}_field_{str(field_i)}{p_suffix}.npy', r_field)
+    # if method != 'linear':
+    #     n = normals(cloud_map)
+    #     r_field = field - proj_vectors(field, n)
+    #     np.save(f'{assets_path}/r{method}_{prefix}_field_{str(field_i)}{p_suffix}.npy', r_field)
 
 
 def merge_fields(method, cloud_size, n_processes, field_i):
@@ -479,13 +519,13 @@ def merge_fields(method, cloud_size, n_processes, field_i):
 
 
 def main():
-    field_start_i = 2
-    n_fields = 1
+    field_start_i = 0
+    n_fields = 3
 
     # method = 'linear'
     # method = 'plane'
-    method = 'geodesic'
-    # method = 'transport'
+    # method = 'geodesic'
+    method = 'rtransport'
     # method = 'plane2'
     cloud_size = (160, 120)
     z_trans = 0.010
@@ -498,6 +538,7 @@ def main():
         'plane': 8,
         'geodesic': 8,
         'transport': None,
+        'rtransport': None,
         'plane2': None,
     }
 
@@ -515,27 +556,27 @@ def main():
             )
 
         else:
-            children = []
-            for process_i in range(n_processes):
-                child = os.fork()
-                if child:
-                    children.append(child)
-                else:
-                    compute_field(
-                        method=method,
-                        cloud_size=cloud_size,
-                        field_i=field_i,
-                        n_processes=n_processes,
-                        process_i=process_i,
-                        z_trans=z_trans
-                    )
-                    exit()
-
-            for child in children:
-                os.waitpid(child, 0)
-
-            if len(children) > 0:
-                merge_fields(method, cloud_size, n_processes, field_i)
+            # children = []
+            # for process_i in range(n_processes):
+            #     child = os.fork()
+            #     if child:
+            #         children.append(child)
+            #     else:
+            #         compute_field(
+            #             method=method,
+            #             cloud_size=cloud_size,
+            #             field_i=field_i,
+            #             n_processes=n_processes,
+            #             process_i=process_i,
+            #             z_trans=z_trans
+            #         )
+            #         exit()
+            #
+            # for child in children:
+            #     os.waitpid(child, 0)
+            #
+            # if len(children) > 0:
+            merge_fields(method, cloud_size, n_processes, field_i)
 
 
 if __name__ == '__main__':

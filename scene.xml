@@ -1,302 +1,193 @@
 <mujoco>
+            <compiler angle="radian" />
+
             <visual>
                 
                 <map znear="0.001" zfar="50" />
+                <quality shadowsize="2048" />
             </visual>
 
             <asset>
+                
                 <texture name="#1:texplane" type="2d" builtin="checker" rgb1=".2 .3 .4" rgb2=".1 0.15 0.2" width="512" height="512" mark="cross" markrgb=".8 .8 .8" />    
                 <material name="#1:matplane" reflectance="0.3" texture="#1:texplane" texrepeat="1 1" texuniform="true" />
-            <material name="geltip1#2:glass_material" rgba="1 1 1 0.1" />
-                <material name="geltip1#2:white_elastomer" rgba="1 1 1 1" />
-                <material name="geltip1#2:black_plastic" rgba=".3 .3 .3 1" />
+
                 
-                <material name="geltip1#2:label_color" rgba="0 0 1 1.0" />
+                <material name="#1:black_plastic" rgba=".3 .3 .3 1" />
+                <mesh name="#1:object" file="/home/danfergo/Projects/PhD/geltip_simulation/geltip_dataset/scripts/../object_set/sphere.stl" scale="0.001 0.001 0.001" />
+            <material name="printer#2:black_plastic" rgba=".1 .1 .1 1" />
+                <material name="printer#2:black_metal" rgba=".3 .3 .3 1" />
+
+                
+                <mesh name="printer#2:object_mount" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/printer_extended/meshes/mount_object.stl" scale="0.001 0.001 0.001" />
+                <mesh name="printer#2:geltip_printer_mount" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/printer_extended/meshes/geltip_printer_mount.stl" scale="0.001 0.001 0.001" />
+            <mesh name="printer#3:fdm_printer_bottom_frame" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/anet_a30/meshes/bottom_frame.stl" scale="0.0011 0.0011 0.0011" />
+        <mesh name="printer#3:fdm_printer_side1_frame" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/anet_a30/meshes/side1_frame.stl" scale="0.0011 0.0011 0.0011" />
+        <mesh name="printer#3:fdm_printer_side2_frame" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/anet_a30/meshes/side2_frame.stl" scale="0.0011 0.0011 0.0011" />
+
+
+        <mesh name="printer#3:fdm_printer_bed" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/anet_a30/meshes/bed2.stl" scale="0.0011 0.0011 0.0011" />
+        <mesh name="printer#3:fdm_printer_x_axis" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/anet_a30/meshes/x_axis.stl" scale="0.0011 0.0011 0.0011" />
+
+        <material name="printer#3:black_metal" rgba=".2 .2 .2 1" specular="0.95" />
+
+    <material name="geltip#4:glass_material" rgba="1 1 1 0.1" />
+                <material name="geltip#4:white_elastomer" rgba="1 1 1 1" />
+                <material name="geltip#4:black_plastic" rgba=".3 .3 .3 1" />
+                
+                <material name="geltip#4:label_color" rgba=".5 .5 .5 1.0" />
         
-                <mesh name="geltip1#2:geltip_shell" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/geltip/meshes/shell_open.stl" scale="0.001 0.001 0.001" />
-                <mesh name="geltip1#2:geltip_sleeve" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/geltip/meshes/sleeve_open.stl" scale="0.001 0.001 0.001" />
-                <mesh name="geltip1#2:geltip_mount" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/geltip/meshes/mount.stl" scale="0.001 0.001 0.001" />
+                <mesh name="geltip#4:geltip_shell" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/geltip/meshes/shell_open.stl" scale="0.001 0.001 0.001" />
+                <mesh name="geltip#4:geltip_sleeve" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/geltip/meshes/sleeve_open.stl" scale="0.001 0.001 0.001" />
+                <mesh name="geltip#4:geltip_mount" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/geltip/meshes/mount.stl" scale="0.001 0.001 0.001" />
                 
                 
-                <mesh name="geltip1#2:geltip_glass" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/geltip/meshes/glass_long.stl" scale="0.00099 0.00099 0.00099" />
+                <mesh name="geltip#4:geltip_glass" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/geltip/meshes/glass_long.stl" scale="0.00099 0.00099 0.00099" />
                 
                 
-                <mesh name="geltip1#2:geltip_elastomer" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/geltip/meshes/elastomer_long.stl" scale="0.0011 0.0011 0.0011" />  
-                
-                
-                
-                <mesh name="geltip1#2:geltip_elastomer_inv" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/geltip/meshes/elastomer_very_long_voxel_e-6_inv.stl" scale="0.001 0.001 0.001" />
-        
-            <material name="geltip2#3:glass_material" rgba="1 1 1 0.1" />
-                <material name="geltip2#3:white_elastomer" rgba="1 1 1 1" />
-                <material name="geltip2#3:black_plastic" rgba=".3 .3 .3 1" />
-                
-                <material name="geltip2#3:label_color" rgba="0 1 0 1.0" />
-        
-                <mesh name="geltip2#3:geltip_shell" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/geltip/meshes/shell_open.stl" scale="0.001 0.001 0.001" />
-                <mesh name="geltip2#3:geltip_sleeve" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/geltip/meshes/sleeve_open.stl" scale="0.001 0.001 0.001" />
-                <mesh name="geltip2#3:geltip_mount" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/geltip/meshes/mount.stl" scale="0.001 0.001 0.001" />
-                
-                
-                <mesh name="geltip2#3:geltip_glass" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/geltip/meshes/glass_long.stl" scale="0.00099 0.00099 0.00099" />
-                
-                
-                <mesh name="geltip2#3:geltip_elastomer" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/geltip/meshes/elastomer_long.stl" scale="0.0011 0.0011 0.0011" />  
+                <mesh name="geltip#4:geltip_elastomer" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/geltip/meshes/elastomer_long.stl" scale="0.00099 0.00099 0.00099" />  
                 
                 
                 
-                <mesh name="geltip2#3:geltip_elastomer_inv" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/geltip/meshes/elastomer_very_long_voxel_e-6_inv.stl" scale="0.001 0.001 0.001" />
-        
-            <material name="geltip3#4:glass_material" rgba="1 1 1 0.1" />
-                <material name="geltip3#4:white_elastomer" rgba="1 1 1 1" />
-                <material name="geltip3#4:black_plastic" rgba=".3 .3 .3 1" />
-                
-                <material name="geltip3#4:label_color" rgba="1 0 0 1.0" />
-        
-                <mesh name="geltip3#4:geltip_shell" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/geltip/meshes/shell_open.stl" scale="0.001 0.001 0.001" />
-                <mesh name="geltip3#4:geltip_sleeve" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/geltip/meshes/sleeve_open.stl" scale="0.001 0.001 0.001" />
-                <mesh name="geltip3#4:geltip_mount" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/geltip/meshes/mount.stl" scale="0.001 0.001 0.001" />
-                
-                
-                <mesh name="geltip3#4:geltip_glass" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/geltip/meshes/glass_long.stl" scale="0.00099 0.00099 0.00099" />
-                
-                
-                <mesh name="geltip3#4:geltip_elastomer" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/geltip/meshes/elastomer_long.stl" scale="0.0011 0.0011 0.0011" />  
-                
-                
-                
-                <mesh name="geltip3#4:geltip_elastomer_inv" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/geltip/meshes/elastomer_very_long_voxel_e-6_inv.stl" scale="0.001 0.001 0.001" />
-        
-            <material name="geltip4#5:glass_material" rgba="1 1 1 0.1" />
-                <material name="geltip4#5:white_elastomer" rgba="1 1 1 1" />
-                <material name="geltip4#5:black_plastic" rgba=".3 .3 .3 1" />
-                
-                <material name="geltip4#5:label_color" rgba="1 1 0 1.0" />
-        
-                <mesh name="geltip4#5:geltip_shell" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/geltip/meshes/shell_open.stl" scale="0.001 0.001 0.001" />
-                <mesh name="geltip4#5:geltip_sleeve" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/geltip/meshes/sleeve_open.stl" scale="0.001 0.001 0.001" />
-                <mesh name="geltip4#5:geltip_mount" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/geltip/meshes/mount.stl" scale="0.001 0.001 0.001" />
-                
-                
-                <mesh name="geltip4#5:geltip_glass" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/geltip/meshes/glass_long.stl" scale="0.00099 0.00099 0.00099" />
-                
-                
-                <mesh name="geltip4#5:geltip_elastomer" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/geltip/meshes/elastomer_long.stl" scale="0.0011 0.0011 0.0011" />  
-                
-                
-                
-                <mesh name="geltip4#5:geltip_elastomer_inv" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/geltip/meshes/elastomer_very_long_voxel_e-6_inv.stl" scale="0.001 0.001 0.001" />
-        
-            <material name="geltip5#6:glass_material" rgba="1 1 1 0.1" />
-                <material name="geltip5#6:white_elastomer" rgba="1 1 1 1" />
-                <material name="geltip5#6:black_plastic" rgba=".3 .3 .3 1" />
-                
-                <material name="geltip5#6:label_color" rgba="0 1 1 1.0" />
-        
-                <mesh name="geltip5#6:geltip_shell" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/geltip/meshes/shell_open.stl" scale="0.001 0.001 0.001" />
-                <mesh name="geltip5#6:geltip_sleeve" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/geltip/meshes/sleeve_open.stl" scale="0.001 0.001 0.001" />
-                <mesh name="geltip5#6:geltip_mount" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/geltip/meshes/mount.stl" scale="0.001 0.001 0.001" />
-                
-                
-                <mesh name="geltip5#6:geltip_glass" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/geltip/meshes/glass_long.stl" scale="0.00099 0.00099 0.00099" />
-                
-                
-                <mesh name="geltip5#6:geltip_elastomer" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/geltip/meshes/elastomer_long.stl" scale="0.0011 0.0011 0.0011" />  
-                
-                
-                
-                <mesh name="geltip5#6:geltip_elastomer_inv" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/geltip/meshes/elastomer_very_long_voxel_e-6_inv.stl" scale="0.001 0.001 0.001" />
-        
-            <material name="geltip6#7:glass_material" rgba="1 1 1 0.1" />
-                <material name="geltip6#7:white_elastomer" rgba="1 1 1 1" />
-                <material name="geltip6#7:black_plastic" rgba=".3 .3 .3 1" />
-                
-                <material name="geltip6#7:label_color" rgba="1 0 1 1.0" />
-        
-                <mesh name="geltip6#7:geltip_shell" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/geltip/meshes/shell_open.stl" scale="0.001 0.001 0.001" />
-                <mesh name="geltip6#7:geltip_sleeve" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/geltip/meshes/sleeve_open.stl" scale="0.001 0.001 0.001" />
-                <mesh name="geltip6#7:geltip_mount" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/geltip/meshes/mount.stl" scale="0.001 0.001 0.001" />
-                
-                
-                <mesh name="geltip6#7:geltip_glass" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/geltip/meshes/glass_long.stl" scale="0.00099 0.00099 0.00099" />
-                
-                
-                <mesh name="geltip6#7:geltip_elastomer" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/geltip/meshes/elastomer_long.stl" scale="0.0011 0.0011 0.0011" />  
-                
-                
-                
-                <mesh name="geltip6#7:geltip_elastomer_inv" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/geltip/meshes/elastomer_very_long_voxel_e-6_inv.stl" scale="0.001 0.001 0.001" />
+                <mesh name="geltip#4:geltip_elastomer_inv" file="/home/danfergo/Projects/PhD/geltip_simulation/experimental_setup/geltip/meshes/elastomer_very_long_voxel_e-6_inv.stl" scale="0.001 0.001 0.001" />
         
             </asset>
+
             <worldbody>
-                <light directional="true" diffuse=".4 .4 .4" specular="0.1 0.1 0.1" pos="0 0 5.0" dir="0 0 -1" />
-                <light directional="true" diffuse=".6 .6 .6" specular="0.2 0.2 0.2" pos="0 0 4" dir="0 0 -1" />
+                <light directional="true" diffuse=".9 .9 .9" specular="0.1 0.1 0.1" pos="0 0 5.0" dir="0 0 -1" />
+                <camera name="#1:viewer" pos="0 0 0.5" mode="fixed" zaxis="0 0 1" />
 
                 <body name="#1:floor">
                     <geom name="#1:ground" type="plane" size="0 0 1" pos="0 0 0" quat="1 0 0 0" material="#1:matplane" condim="1" />
                 </body>
-                
-                
-                
 
-                <body pos="0.0 0.0 0.1" xyaxes="-1 0 0 0 0 1">
-                    <body name="geltip1#2:geltip">
-                    <geom type="sphere" density="0.1" material="geltip1#2:label_color" size="0.005" pos="0.0 0.012 -0.025" />
-                    <geom density="0.1" type="mesh" mesh="geltip1#2:geltip_shell" material="geltip1#2:black_plastic" />
-                    <geom density="0.1" type="mesh" mesh="geltip1#2:geltip_sleeve" material="geltip1#2:black_plastic" />
-                    <geom density="0.1" type="mesh" mesh="geltip1#2:geltip_mount" material="geltip1#2:black_plastic" />
-                    <camera name="geltip1#2:camera" pos="0 0 0.01" zaxis="0 0 -1" fovy="90" />
-                    <body>
-                    
-                       
-                       
-                              
-                       
-                       
-                            
-                       <geom type="mesh" mesh="geltip1#2:geltip_elastomer_inv" contype="32" conaffinity="32" material="geltip1#2:white_elastomer" /> 
-                       
-                       
-                       
-                    </body>
-        
-                </body>
+                <body>
+
+            
+            <body pos="0 0 0.09">
+                <geom type="mesh" mesh="printer#3:fdm_printer_bottom_frame" material="printer#3:black_metal" />
+                <geom type="mesh" mesh="printer#3:fdm_printer_side1_frame" material="printer#3:black_metal" />
+                <geom type="mesh" mesh="printer#3:fdm_printer_side2_frame" material="printer#3:black_metal" />
+                <geom type="mesh" mesh="printer#3:fdm_printer_x_axis" material="printer#3:black_metal" />
             </body>
 
-                <body pos="0.05 0.0 0.1" xyaxes="-1 0 0 0 0 1"> 
-                    <body>
-                         <geom pos=".0095 -.0075 .04" size=".0035" rgba="0 1 1 1" />
-                    </body>
-                <body name="geltip2#3:geltip">
-                    <geom type="sphere" density="0.1" material="geltip2#3:label_color" size="0.005" pos="0.0 0.012 -0.025" />
-                    <geom density="0.1" type="mesh" mesh="geltip2#3:geltip_shell" material="geltip2#3:black_plastic" />
-                    <geom density="0.1" type="mesh" mesh="geltip2#3:geltip_sleeve" material="geltip2#3:black_plastic" />
-                    <geom density="0.1" type="mesh" mesh="geltip2#3:geltip_mount" material="geltip2#3:black_plastic" />
-                    <camera name="geltip2#3:camera" pos="0 0 0.01" zaxis="0 0 -1" fovy="90" />
-                    <body>
+            
+            <body name="printer#3:zaxis_body" pos="0 -0.025 0.0634">
+
+                <joint name="printer#3:zaxis" type="slide" stiffness="50" damping="100" axis="0 0 1" />
+
+                <geom type="mesh" mesh="printer#3:fdm_printer_x_axis" material="printer#3:black_metal" fitscale="0.001" pos="0 0 -0.498" />
+
+                
+                <body name="printer#3:xaxis_body">
+                    <joint name="printer#3:xaxis" type="slide" stiffness="50" damping="100" axis="1 0 0" />
+
                     
-                       
-                       
+                    <body pos="-0.002 0 0.05" name="printer#3:printer_head">
+                        <geom type="box" pos="0.001 0.01 0.005" size=".04 .002 .035" material="printer#3:black_metal" />
+                        
                               
-                       
-                       
+                              
+                    <body>
+                             <geom type="box" pos="-0.01 -0.014 -0.015" size=".025 .018 .0125" material="printer#2:black_plastic" />
+    
                             
-                       <geom type="mesh" mesh="geltip2#3:geltip_elastomer_inv" contype="32" conaffinity="32" material="geltip2#3:white_elastomer" /> 
-                       
-                       
-                       
+                             
+                            <body name="printer#2:a2_body" pos="-0.032 -0.04 -0.016" xyaxes="1 0 0 0 -1 0">
+                                <body>
+                                    <joint name="printer#2:a1" armature="1" damping="100" type="hinge" axis="0 -1 0" />
+                                    
+                                    <geom type="mesh" pos="0 0 0" mesh="printer#2:object_mount" material="printer#2:black_plastic" />
+                                    
+                                    
+                                    
+                                    <body pos="0 0.0108 0" name="printer#2:indenter_mount" axisangle="1 0 0 0">
+                                        
+                                    <geom type="mesh" density="0.1" mesh="#1:object" material="#1:black_plastic" />
+                    </body>                                      
+                                </body>
+                            </body>
+                        </body>
+                
                     </body>
-        
                 </body>
             </body>
 
-                <body pos="0.1 0.0 0.1" xyaxes="-1 0 0 0 0 1"> 
-                    <body>
-                         <geom pos="-.01 -.009 .04" size=".0055" rgba="1 0 0 1" />
-                    </body>
-                <body name="geltip3#4:geltip">
-                    <geom type="sphere" density="0.1" material="geltip3#4:label_color" size="0.005" pos="0.0 0.012 -0.025" />
-                    <geom density="0.1" type="mesh" mesh="geltip3#4:geltip_shell" material="geltip3#4:black_plastic" />
-                    <geom density="0.1" type="mesh" mesh="geltip3#4:geltip_sleeve" material="geltip3#4:black_plastic" />
-                    <geom density="0.1" type="mesh" mesh="geltip3#4:geltip_mount" material="geltip3#4:black_plastic" />
-                    <camera name="geltip3#4:camera" pos="0 0 0.01" zaxis="0 0 -1" fovy="90" />
-                    <body>
-                    
-                       
-                       
-                              
-                       
-                       
-                            
-                       <geom type="mesh" mesh="geltip3#4:geltip_elastomer_inv" contype="32" conaffinity="32" material="geltip3#4:white_elastomer" /> 
-                       
-                       
-                       
-                    </body>
-        
-                </body>
-            </body>
+            <body name="printer#3:printer_bed" pos="0 0 0.08">
+                <joint name="printer#3:yaxis" type="slide" stiffness="50" damping="100" axis="0 -1 0" />
 
-                <body pos="0.15 0.0 0.1" xyaxes="-1 0 0 0 0 1"> 
-                    <body>
-                         <geom pos=".009 .009 .04" size=".0065" rgba="1 0 0 1" />
-                    </body>
-                <body name="geltip4#5:geltip">
-                    <geom type="sphere" density="0.1" material="geltip4#5:label_color" size="0.005" pos="0.0 0.012 -0.025" />
-                    <geom density="0.1" type="mesh" mesh="geltip4#5:geltip_shell" material="geltip4#5:black_plastic" />
-                    <geom density="0.1" type="mesh" mesh="geltip4#5:geltip_sleeve" material="geltip4#5:black_plastic" />
-                    <geom density="0.1" type="mesh" mesh="geltip4#5:geltip_mount" material="geltip4#5:black_plastic" />
-                    <camera name="geltip4#5:camera" pos="0 0 0.01" zaxis="0 0 -1" fovy="90" />
-                    <body>
-                    
-                       
-                       
-                              
-                       
-                       
-                            
-                       <geom type="mesh" mesh="geltip4#5:geltip_elastomer_inv" contype="32" conaffinity="32" material="geltip4#5:white_elastomer" /> 
-                       
-                       
-                       
-                    </body>
-        
-                </body>
-            </body>
                 
-                <body pos="0.2 0.0 0.1" xyaxes="-1 0 0 0 0 1"> 
-                    <body>
-                         <geom pos=".0 .0 .05" size=".0065" rgba="1 0 0 1" />
-                    </body>
-                <body name="geltip5#6:geltip">
-                    <geom type="sphere" density="0.1" material="geltip5#6:label_color" size="0.005" pos="0.0 0.012 -0.025" />
-                    <geom density="0.1" type="mesh" mesh="geltip5#6:geltip_shell" material="geltip5#6:black_plastic" />
-                    <geom density="0.1" type="mesh" mesh="geltip5#6:geltip_sleeve" material="geltip5#6:black_plastic" />
-                    <geom density="0.1" type="mesh" mesh="geltip5#6:geltip_mount" material="geltip5#6:black_plastic" />
-                    <camera name="geltip5#6:camera" pos="0 0 0.01" zaxis="0 0 -1" fovy="90" />
-                    <body>
-                    
-                       
-                       
-                              
-                       
-                       
-                            
-                       <geom type="mesh" mesh="geltip5#6:geltip_elastomer_inv" contype="32" conaffinity="32" material="geltip5#6:white_elastomer" /> 
-                       
-                       
-                       
-                    </body>
-        
-                </body>
-            </body>
                 
-                <body pos="0.25 0.0 0.1" xyaxes="-1 0 0 0 0 1"> 
-                    <body>
-                         <geom pos=".004 .0 .05" size=".0065" rgba="1 0 0 1" />
-                    </body>
-                <body name="geltip6#7:geltip">
-                    <geom type="sphere" density="0.1" material="geltip6#7:label_color" size="0.005" pos="0.0 0.012 -0.025" />
-                    <geom density="0.1" type="mesh" mesh="geltip6#7:geltip_shell" material="geltip6#7:black_plastic" />
-                    <geom density="0.1" type="mesh" mesh="geltip6#7:geltip_sleeve" material="geltip6#7:black_plastic" />
-                    <geom density="0.1" type="mesh" mesh="geltip6#7:geltip_mount" material="geltip6#7:black_plastic" />
-                    <camera name="geltip6#7:camera" pos="0 0 0.01" zaxis="0 0 -1" fovy="90" />
-                    <body>
-                    
-                       
-                       
-                              
-                       
-                       
-                            
-                       <geom type="mesh" mesh="geltip6#7:geltip_elastomer_inv" contype="32" conaffinity="32" material="geltip6#7:white_elastomer" /> 
-                       
-                       
-                       
-                    </body>
-        
-                </body>
-            </body>
 
-            </worldbody>        
-        </mujoco>
+                <geom type="mesh" mesh="printer#3:fdm_printer_bed" material="printer#3:black_metal" friction="0.4 0.4 0.8" />
+
+
+            <body>
+                            
+                            <geom type="box" size="0.1085 0.165 0.003" pos="0.17 0.165 0.004" rgba=".8 .68 0.5 1" />
+                           
+                           
+                           <body pos="0 0 0">
+                                  
+                            <body pos="0.153 0.128 0.046" xyaxes="0 1 0 0 0 1">
+                                    
+                                    <geom type="box" zaxis="0 1 0" pos="0.01 0.0 -0.065" size=".025 .018 .0125" material="printer#2:black_plastic" />
+                                      
+                                  
+                                  <geom type="box" pos="0.01 -.014 -0.065" size=".04 .001 .0125" material="printer#2:black_metal" />
+                                  <geom type="box" pos="0.01 -.038 -0.065" size=".04 .001 .0125" material="printer#2:black_metal" />
+                                  <geom type="box" zaxis="0 1 0" pos="0.01 -.026 -0.053" size=".04 .001 .0125" material="printer#2:black_metal" />
+                                      
+                                    
+                                    
+                                    <geom type="mesh" pos="0 0 0.003" mesh="printer#2:geltip_printer_mount" material="printer#2:black_plastic" friction="0.4 0.4 0.8" />
+                                       
+                                       
+                                      <body name="printer#2:geltip_mount">
+                                          <joint name="printer#2:a2" type="hinge" armature="1" damping="100" axis="0 0 -1" />
+                                               
+                                           
+                                           <geom type="cylinder" density="0.1" pos="0 0 -0.045 " size="0.01 0.001" /> 
+                                      <body name="geltip#4:geltip">
+                    <geom type="sphere" density="0.1" material="geltip#4:label_color" size="0.005" pos="0.0 0.012 -0.025" />
+                    <geom density="0.1" type="mesh" mesh="geltip#4:geltip_shell" material="geltip#4:black_plastic" />
+                    <geom density="0.1" type="mesh" mesh="geltip#4:geltip_sleeve" material="geltip#4:black_plastic" />
+                    <geom density="0.1" type="mesh" mesh="geltip#4:geltip_mount" material="geltip#4:black_plastic" />
+                    <camera name="geltip#4:camera" pos="0 0 0.01" zaxis="0 0 -1" fovy="90" />
+                    <body>
+                    
+                       
+                       
+                              
+                       
+                       
+                            
+                       
+                       
+                       
+                       <geom density="0.1" type="mesh" mesh="geltip#4:geltip_elastomer" friction="1 0.05 0.01" contype="32" conaffinity="32" material="geltip#4:white_elastomer" /> 
+                    </body>
+        
+                </body>
+            </body>
+                                </body>
+                            </body>
+                    </body>
+                </body>
+        </body>
+    </worldbody>    
+        <sensor>
+                   <actuatorpos name="printer#2:a1" actuator="printer#2:a1" />
+                   <actuatorpos name="printer#2:a2" actuator="printer#2:a2" />
+            <actuatorpos name="printer#3:x" actuator="printer#3:ax" />
+        <actuatorpos name="printer#3:y" actuator="printer#3:ay" />
+        <actuatorpos name="printer#3:z" actuator="printer#3:az" />
+    </sensor>   
+        <actuator>
+                  <position name="printer#2:a1" gear="50" joint="printer#2:a1" forcelimited="true" forcerange="-10 10" kp="10" />
+                  <position name="printer#2:a2" gear="50" joint="printer#2:a2" forcelimited="true" forcerange="-10 10" kp="10" />
+            <position name="printer#3:ax" gear="50" joint="printer#3:xaxis" forcelimited="true" forcerange="-500 500" kp="50" />
+        <position name="printer#3:ay" gear="50" joint="printer#3:yaxis" forcelimited="true" forcerange="-500 500" kp="50" />
+        <position name="printer#3:az" gear="50" joint="printer#3:zaxis" forcelimited="true" forcerange="-500 500" kp="50" />
+    </actuator>
+            </mujoco>

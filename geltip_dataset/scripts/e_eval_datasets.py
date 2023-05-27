@@ -5,7 +5,7 @@ import numpy as np
 import os
 import cv2
 
-from sim_model import circle_mask
+from sim_model.utils.camera import circle_mask
 
 
 def rectified_mae_loss(true, test):
@@ -48,8 +48,10 @@ def main():
     field_names = ['linear', 'plane', 'geodesic', 'transport']
     # field_names = ['plane']
     fields = [
-        f'{n}{"_elastic" if elastic else ""}{"_bkg" if bkg else ""}'
-        for n in field_names for elastic in [True] for bkg in [True, False]
+        f'{n}{"_elastic" if elastic else ""}_{bkg}bg'
+        for n in field_names
+        for elastic in [True, False]
+        for bkg in ['no', 'solid', 'real']
     ]
 
     N_ROWS = 3
@@ -63,14 +65,20 @@ def main():
         real_imgs = []
         sim_imgs = []
 
+        maes = []
+        ssims = []
+        psnrs = []
+
         for obj in objects:
             for i in range(N_ROWS):
                 for j in range(N_CONTACTS):
+
                     real_img = (cv2.cvtColor(
                         cv2.imread(dataset_path + 'real_rgb_aligned/' + obj + '/' + str(i) + '_' + str(j) + '.png'),
                         cv2.COLOR_BGR2RGB
                     ) * mask3).astype(np.uint8)
 
+                    # print(dataset_path + 'sim_' + field + '/' + obj + '/' + str(i) + '_' + str(j) + '.png')
                     sim_img = cv2.cvtColor(
                         cv2.imread(dataset_path + 'sim_' + field + '/' + obj + '/' + str(i) + '_' + str(j) + '.png'),
                         cv2.COLOR_BGR2RGB
@@ -78,6 +86,10 @@ def main():
 
                     real_imgs.append(real_img)
                     sim_imgs.append(sim_img)
+
+        # maes = rectified_mae_loss(real_imgs, sim_imgs)
+        # ssims = ssim_loss(real_imgs, sim_imgs)
+        # psnrs = psnr_loss(real_imgs, sim_imgs)
 
         real_imgs = np.array(real_imgs)
         sim_imgs = np.array(sim_imgs)

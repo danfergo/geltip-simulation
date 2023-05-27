@@ -1,3 +1,5 @@
+import time
+
 import numpy as np
 import os
 import cv2
@@ -8,40 +10,60 @@ from sim_model.utils.vis_img import to_panel
 
 fields_size = (120, 160)
 sim_size = (640, 480)
+# sim_size = (320, 240)
 # field = 'linear'
 # field = 'geodesic'
 # field = 'plane'
-# field = 'geodesic'
+field = 'geodesic'
 # field = 'planes'
 # field = 'geodesic'
-field = 'transport'
+# field = 'transport'
+# field = 'rtransport'
 # field = 'plane2'
+rectify_fields = True
 
 __location__ = os.path.dirname(os.path.abspath(__file__))
 assets_path = os.path.join(__location__, '../../experimental_setup/geltip/sim_assets/')
 
 light_fields = SimulationModel.load_assets(assets_path, fields_size, sim_size, field, 3)
 
+stack = cv2.resize(cv2.cvtColor(cv2.cvtColor(cv2.imread(assets_path + '/bkg.png'), cv2.COLOR_BGR2GRAY), cv2.COLOR_GRAY2BGR), sim_size)
+
 model = SimulationModel(**{
-    'ia': 0.8,
+    'ia': 0.5,
     'fov': 90,
     'light_sources': [
-        {'field': light_fields[0], 'color': [255, 0, 0], 'id': 0.5, 'is': 0.1},  # [108, 82, 255]
-        {'field': light_fields[1], 'color': [0, 255, 0], 'id': 0.5, 'is': 0.1},  # [255, 130, 115]
-        {'field': light_fields[2], 'color': [0, 0, 255], 'id': 0.5, 'is': 0.1},  # [120, 255, 153]
+        {'field': light_fields[1], 'color': [255, 0, 0], 'id': 0.5, 'is': 0.1},  # [108, 82, 255]
+        {'field': light_fields[2], 'color': [0, 255, 0], 'id': 0.5, 'is': 0.1},  # [255, 130, 115]
+        {'field': light_fields[0], 'color': [0, 0, 255], 'id': 0.5, 'is': 0.1},  # [120, 255, 153]
     ],
-    'background_depth': np.load(assets_path + 'bkg.npy'),
+    'background_depth': cv2.resize(np.load(assets_path + 'bkg.npy'), sim_size),
     # 'cloud_map': cloud,
-    'background_img': np.stack([np.zeros(sim_size[::-1]), np.zeros(sim_size[::-1]), np.zeros(sim_size[::-1])], axis=2),
-    # cv2.imread(assets_path + '/bkg.jpg'),
+    # 'background_img': np.stack([np.zeros(sim_size[::-1]), np.zeros(sim_size[::-1]), np.zeros(sim_size[::-1])], axis=2) * 0.5,
+    # 'background_img': (cv2.cvtColor(cv2.imread(assets_path + '/bkg.png'), cv2.COLOR_RGB2BGR) / 255).astype(np.float32),
+    'background_img': (stack / 255).astype(np.float32),
     'elastomer_thickness': 0.004,
     'min_depth': 0.026,
     'texture_sigma': 0.00001,
-    'elastic_deformation': True
+    'elastic_deformation': True,
+    'rectify_fields': rectify_fields
 })
-depths = [np.load(assets_path + ('bkg' if i == 0 else 'depth_' + str(i)) + '.npy') for i in range(6)]
+# ('bkg' if i == 0 else 'depth_' +
+depths = [np.load(assets_path + (str(i)) + '.npy') for i in range(6)]
 m = circle_mask(sim_size)
 m3 = np.stack([m, m, m], axis=2)
+
+# for i, depth in enumerate(depths):
+# frame = cv2.resize(depths[0], sim_size)
+# elapsed_time = 0
+# for i in range(30):
+#     start_time = time.time()
+#     sim_frame = model.generate(frame)
+#     end_time = time.time()
+#     elapsed_time += (end_time - start_time)
+# print(elapsed_time/30)
+# cv2.imshow('frame', sim_frame)
+# cv2.waitKey(-1)
 
 tactile_rgb = [
     cv2.cvtColor(model.generate(cv2.resize(depth, sim_size)), cv2.COLOR_RGB2BGR)
@@ -49,7 +71,7 @@ tactile_rgb = [
     # if i > 4
 ]
 
-cv2.imshow('tactile_rgb', to_panel(tactile_rgb, shape=(2, 3)))
+cv2.imshow('tactile_rgb', to_panel(tactile_rgb, shape=(1, 6)))
 cv2.waitKey(-1)
 
 # tactile_rgb = [

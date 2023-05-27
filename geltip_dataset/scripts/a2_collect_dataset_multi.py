@@ -1,3 +1,4 @@
+import math
 import os
 
 from yarok import Platform, PlatformMJC, PlatformHW, ConfigBlock, Injector, component
@@ -18,7 +19,8 @@ import cv2
     ],
     defaults={
         'n_printers': 20,
-        'row_size': 5
+        'row_size': 5,
+        's': ['obj0']
     },
     template="""
         <mujoco>
@@ -38,7 +40,8 @@ import cv2
 
                 <!-- object set -->
                 <material name="black_plastic" rgba=".3 .3 .3 1"/>
-                <mesh name="object" file="../object_set/${object}.stl" scale="0.001 0.001 0.001"/>
+                <mesh name="obj0" file="../object_set/${object}.stl" scale="0.001 0.001 0.001"/>
+                <mesh name="obj1" file="../object_set/${object}.stl" scale="0.00099 0.00099 0.00099"/>
             </asset>
 
             <worldbody>
@@ -57,9 +60,9 @@ import cv2
                                  pos="0.001 0.001 0.001"
                                  type="mesh"
                                  density="0.1"
-                                 mesh="object"
+                                 mesh="${s[i]}"
                                  material="black_plastic"/>
-                             <geltip name="geltip${i}" parent="geltip_mount"/>
+                            <geltip name="geltip${i}" parent="geltip_mount"/>
                         </printer_extended>
                     </body>
                 </for>
@@ -93,8 +96,9 @@ class DatasetCollectionBehaviour:
         self.TRA_STEPS = 9  # the first translation step is skipped,
         # as it is shared with the rotations
         # total number of contacts = ROT + TRA - 1, 0-indexed
+        self.N_CONTACTS = self.ROT_STEPS + self.TRA_STEPS - 1
 
-        self.N_ROWS = 6  # longitudinal rows/lines/paths
+        self.N_ROWS = 5  # longitudinal rows/lines/paths
         self.GAMMA_AMPLITUDE = 180  # angle rotation between rows/lines/paths
 
         self.INDENTER_H = 20  # 10mm base, 10mm indenter per say
@@ -121,24 +125,32 @@ class DatasetCollectionBehaviour:
         self.LOW_PATH = self.RADIUS + self.INDENTER_H - self.PROTRUSION_DEPTH
         self.HIGH_PATH = self.RADIUS + self.INDENTER_H + self.MARGIN
 
-    def save_frame(self, key):
+        if self.config['save_data']:
+            if not os.path.exists(self.data_path):
+                os.mkdir(self.data_path)
+            if not os.path.exists(self.data_path + '/' + self.object_name):
+                os.mkdir(self.data_path + '/' + self.object_name)
+
+    def save_frame(self, key, sensor):
         if not self.config['save_data']:
             return
 
-        # frame_path = self.data_path + '/' + self.object_name + '/' + key
-        #
-        # if self.config['dataset_name'].split('_')[0] == 'sim':
-        #     def save_np(p, d):
-        #         with open(p + '.npy', 'wb') as f:
-        #             np.save(f, d)
-        #
-        #     [save_np(frame_path + '__' + str(i), self.geltips[i].read_depth()) for i in range(self.n_printers)]
-        # else:
-        #     [cv2.imwrite(frame_path + '__' + str(i) + '.png', self.geltips[i].read()) for i in range(self.n_printers)]
-        # print('saved ' + key)
+        frame_path = self.data_path + '/' + self.object_name + '/' + key
+
+        if self.config['dataset_name'].split('_')[0] == 'sim':
+            with open(frame_path + '.npy', 'wb') as f:
+                depth_frame = sensor.read_depth()
+                print('min', depth_frame.min(), 'max', depth_frame.max())
+                np.save(f, depth_frame)
+        else:
+            cv2.imwrite(frame_path + '.png', sensor.read())
+        print('saved ' + key)
 
     def save_data_frame(self, r, ith):
-        self.save_frame(str(r) + '_' + str(ith))
+        [
+            self.save_frame(str(r) + '_' + str(i * self.N_CONTACTS + ith), self.geltips[i])
+            for i in range(self.n_printers)
+        ]
 
     def move(self, position=None, angles=None):
         print('move: ', position, angles)
@@ -162,7 +174,7 @@ class DatasetCollectionBehaviour:
         print('Ended preparation points. ')
 
         # collect a background fame for reference
-        self.save_frame('bkg')
+        self.save_frame('bkg', self.geltips[0])
 
         for r in range(self.N_ROWS):
 
@@ -210,7 +222,7 @@ class DatasetCollectionBehaviour:
                 # capture frame.
                 self.movec((- tra * dx, 0, self.LOW_PATH))
 
-                self.save_data_frame(r, self.TRA_STEPS + tra)
+                self.save_data_frame(r, (self.ROT_STEPS - 1) + tra)
                 self.movec((- tra * dx, 0, self.HIGH_PATH))
 
             print('ended.')
@@ -230,13 +242,31 @@ def main():
         But Yarok didn't support it when implementing this data collection.
     """
     objects = [
-        'cone',
+        # 'cone',
         # 'sphere',
-        # 'cylinder_shell', 'dot_in',
-        # 'dots', 'pacman',
-        # 'sphere', 'random'
+        # 'cylinder',
+        # 'cylinder_shell',
+        # 'dot_in',
+        # 'dots',
+        # 'pacman',
+        'random'
     ]
-    n_printers = 20
+
+    deltas = [
+        {
+            'dx': dx,
+            'dy': dy,
+            'rx': ry * 0.0174533,
+            's': object_size
+        }
+        for dx in [-1, 0]
+        for dy in [-1, 0, 1]
+        for ry in [-1, 0, 1]
+        for object_size in ['obj0', 'obj1']
+    ]
+
+    n_printers = len(deltas)
+
     for obj in objects:
         Platform.create({
             'world': DatasetCollectionWorld,
@@ -251,7 +281,16 @@ def main():
                 'components': {
                     '/': {
                         'n_printers': n_printers,
-                        'object': obj
+                        'row_size': round(math.sqrt(n_printers)),
+                        'object': obj,
+                        's': [deltas[i]['s'] for i in range(n_printers)]
+                    },
+                    **{
+                        '/printer' + str(i): {
+                            'dx': deltas[i]['dx'],
+                            'dy': deltas[i]['dy']
+                        }
+                        for i in range(n_printers)
                     },
                     **{
                         '/geltip' + str(i): {

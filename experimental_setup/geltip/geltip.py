@@ -126,7 +126,7 @@ class GelTipInterfaceHW:
                 <mesh name="geltip_glass" file="meshes/glass_long.stl" scale="0.00099 0.00099 0.00099"/>
                 
                 <!-- the outter elastomer, for visual purposes -->
-                <mesh name="geltip_elastomer" file="meshes/elastomer_long.stl" scale="0.0011 0.0011 0.0011"/>  
+                <mesh name="geltip_elastomer" file="meshes/elastomer_long.stl" scale="0.00099 0.00099 0.00099"/>  
                 
                 <!-- inverted mesh, for limiting the depth map-->
                 <!-- changing this mesh changes the depth maps -->
@@ -157,21 +157,20 @@ class GelTipInterfaceHW:
                        <!-- inverted, mesh, for limiting the depth-map -->
                        <!-- changing this geom/mesh changes the depth maps -->
                        <!-- 32 for contype and conaffinity disables collisions -->     
-                       <geom  type="mesh" 
+                       <!-- <geom  type="mesh" 
                               mesh="geltip_elastomer_inv" 
                               contype="32"  
                               conaffinity="32" 
-                              material="white_elastomer" /> 
+                              material="white_elastomer" /> -->
                        
                        <!-- white elastomer, for visual purposes -->
-                       <!-- <geom density="0.1" 
+                       <geom density="0.1" 
                               type="mesh" 
                               mesh="geltip_elastomer" 
                               friction="1 0.05 0.01" 
                               contype="32" 
                               conaffinity="32" 
-                              pos="0.0 0.0 -0.007"
-                              material="white_elastomer"/> -->
+                              material="white_elastomer"/> 
                     </body>
         
                 </body>

@@ -2,15 +2,11 @@
 import cv2
 import numpy as np
 
-from sim_model.utils.camera import get_camera_matrix, depth2cloud
-from sim_model.utils.maths import normalize_vectors, gkern2, dot_vectors, partial_derivative, normals, proj_vectors, \
-    norm_vectors
-from sim_model.utils.vis_img import to_normed_rgb
-from sim_model.utils.vis_mesh import show_field
+import open3d as o3d
 
-""" 
-    GelSight Simulation
-"""
+from sim_model.utils.camera import get_camera_matrix, depth2cloud
+from sim_model.utils.maths import normalize_vectors, gkern2, dot_vectors, normals, proj_vectors, partial_derivative
+from sim_model.utils.vis_img import to_normed_rgb
 
 
 class SimulationModel:
@@ -23,6 +19,7 @@ class SimulationModel:
         self.fov = config['fov'] or 90
 
         self.lights = config['light_sources']
+        self.rectify_fields = config['rectify_fields']
 
         self.bkg_depth = config['background_depth']
         self.cam_matrix = get_camera_matrix(self.bkg_depth.shape[::-1], self.fov)
@@ -32,8 +29,7 @@ class SimulationModel:
         self.s_ref_n = normals(self.s_ref)
 
         self.apply_elastic_deformation = config['elastic_deformation'] if 'elastic_deformation' in config else False
-        # self.elastomer_thickness = config['elastomer_thickness']
-        # self.min_depth = config['min_depth']
+        self.internal_shadow = config['internal_shadow'] if 'internal_shadow' in config else 0.15
 
         # pre compute & defaults
         self.ambient = config['background_img']
@@ -50,52 +46,22 @@ class SimulationModel:
         self.t = config['t'] if 't' in config else 3
         self.sigma = config['sigma'] if 'sigma' in config else 7
         self.kernel_size = config['sigma'] if 'sigma' in config else 21
-        # self.max_depth = self.min_depth + self.elastomer_thickness
 
     @staticmethod
     def load_assets(assets_path, input_res, output_res, lf_method, n_light_sources):
         prefix = str(input_res[1]) + 'x' + str(input_res[0])
 
-        # cloud = np.load(assets_path + '/' + prefix + '_ref_cloud.npy')
-        # cloud = cloud.reshape((input_res[1], input_res[0], 3))
-        # cloud = cv2.resize(cloud, output_res)
-
-        # normals = np.load(assets_path + '/' + prefix + '_surface_normals.npy')
-        # normals = normals.reshape((input_res[1], input_res[0], 3))
-        # normals = cv2.resize(normals, output_res)
         light_fields = [
-            # normalize_vectors(
             cv2.resize(
-                # cv2.GaussianBlur(
-                # cv2.resize(
-                np.load(assets_path + '/' + lf_method + '_' + prefix + '_field_' + str(l) + '.npy'),
-                # (80, 60), interpolation=cv2.INTER_LINEAR),
-                # (25, 25), 0),
+                cv2.GaussianBlur(
+                    np.load(assets_path + '/' + lf_method + '_' + prefix + '_field_' + str(l) + '.npy'),
+                    (25, 25), 0),
                 output_res, interpolation=cv2.INTER_LINEAR)
             # )
             for l in range(n_light_sources)
         ]
         # normals,
         return light_fields
-
-    # def protrusion_map(self, original, not_in_touch):
-    #     protrusion_map = np.copy(original)
-    #     protrusion_map[not_in_touch >= self.max_depth] = self.max_depth
-    #     return protrusion_map
-
-    # def segments(self, depth_map):
-    #     not_in_touch = np.copy(depth_map)
-    #     not_in_touch[not_in_touch < self.max_depth] = 0.0
-    #     not_in_touch[not_in_touch >= self.max_depth] = 1.0
-    #
-    #     in_touch = 1 - not_in_touch
-    #
-    #     return not_in_touch, in_touch
-
-    # def internal_shadow(self, elastomer_depth):
-    #     elastomer_depth_inv = self.max_depth - elastomer_depth
-    #     elastomer_depth_inv = np.interp(elastomer_depth_inv, (0, self.elastomer_thickness), (0.0, 1.0))
-    #     return elastomer_depth_inv
 
     def gauss_texture(self, shape):
         row, col = shape
@@ -104,56 +70,16 @@ class SimulationModel:
         gauss = gauss.reshape(row, col)
         return np.stack([gauss, gauss, gauss], axis=2)
 
-    def elastic_deformation(self, protrusion_depth):
-        fat_gauss_size = 95
-        thin_gauss_size = 95
-        thin_gauss_pad = (fat_gauss_size - thin_gauss_size) // 2
-        # - gkern2(gauss2_size, 12)
-        fat_gauss_kernel = gkern2(55, 5)
-        # thin_gauss_kernel = np.pad(gkern2(thin_gauss_size, 21), thin_gauss_pad)
-        # dog_kernel = fat_gauss_kernel - thin_gauss_kernel
-        # show_panel([fat_gauss_kernel, thin_gauss_kernel])
-
-        return cv2.filter2D(protrusion_depth, -1, fat_gauss_kernel)
-
-        # kernel = gkern2(self.kernel_size, self.sigma)
-        # deformation = protrusion_depth
-        #
-        # deformation2 = protrusion_depth
-        # kernel2 = gkern2(52, 9)
-        #
-        # for i in range(self.t):
-        #     deformation_ = cv2.filter2D(deformation, -1, kernel)
-        #     r = np.max(protrusion_depth) / np.max(deformation_) if np.max(deformation_) > 0 else 1
-        #     deformation = np.maximum(r * deformation_, protrusion_depth)
-        #
-        #     deformation2_ = cv2.filter2D(deformation2, -1, kernel2)
-        #     r = np.max(protrusion_depth) / np.max(deformation2_) if np.max(deformation2_) > 0 else 1
-        #     deformation2 = np.maximum(r * deformation2_, protrusion_depth)
-        #
-        # for i in range(self.t):
-        #     deformation_ = cv2.filter2D(deformation2, -1, kernel)
-        #     r = np.max(protrusion_depth) / np.max(deformation_) if np.max(deformation_) > 0 else 1
-        #     deformation2 = np.maximum(r * deformation_, protrusion_depth)
-        #
-        #
-        # deformation_x = 2 * deformation  # - deformation2
-        #
-        # return deformation_x / 2
-        # # return np.stack([deformation_x, deformation_x, deformation_x], axis=2) / 3
-
     def _spec_diff(self, lm_data, v, n, s):
         imd = lm_data['id']
         ims = lm_data['is']
         alpha = lm_data['alpha']
 
-        lm = - lm_data['field']  # points in the direction of the light source,
+        lm = - lm_data['field']
         color = lm_data['color_map']
-        # lm = lm - proj_vectors(lm, self.s_ref_n) # - (self.s_ref - s)
-        # print('-->', dot_vectors(lm, self.s_ref_n)[100, 100])
-        # i.e. p(s) -> light source
 
-        # show_field(cloud_map=s, field=lm, field_color='red', subsample=99)
+        if self.rectify_fields:
+            lm = normalize_vectors(lm - proj_vectors(lm, self.s_ref_n))
 
         # Shared calculations
         lm_n = dot_vectors(lm, n)
@@ -168,90 +94,146 @@ class SimulationModel:
 
         return (diffuse_l + spec_l)[:, :, np.newaxis] * color
 
+    def calculate_occluded_areas(self, protrusion_map, optical_rays):
+        # Threshold the protrusion_map to create a binary map
+        binary_map = (protrusion_map > 0.00001).astype(np.float32)
+
+        # Compute the partial derivatives of the binary map
+        areas_x = partial_derivative(binary_map, 'x')
+        areas_y = partial_derivative(binary_map, 'y')
+
+        # Compare the signs of the optical rays and partial derivatives
+        sign_comparison = np.equal(np.sign(optical_rays[:, :, :2]), np.sign(np.stack([areas_x, areas_y], axis=-1)))
+
+        # Calculate the occluded areas
+        occluded_areas = np.clip(sign_comparison.sum(axis=-1) / 0.05, 0, 1)
+
+        # Dilate the occluded areas
+        kernel = np.ones((3, 3), np.uint8)
+        occluded_areas = cv2.dilate(occluded_areas, kernel, iterations=1)
+
+        # Apply a Gaussian filter
+        occluded_areas = cv2.filter2D(occluded_areas, -1, gkern2(55, 5))
+
+        # Normalize the occluded areas
+        occluded_areas = (occluded_areas - occluded_areas.min()) / (occluded_areas.max() - occluded_areas.min())
+
+        # Remove regions where the binary map has a value of 1
+        kernel = np.ones((7, 7), np.uint8)
+        dilated_binary_map = cv2.dilate(binary_map, kernel, iterations=1)
+        occluded_areas *= (1 - dilated_binary_map)
+
+        return occluded_areas
+
+    def calculate_occluded_areas_alternative(self, surface_normals, optical_rays, threshold=0.95):
+        # Compute the dot product between surface normals and optical rays
+        dot_product = np.abs(np.sum(surface_normals * optical_rays, axis=-1))
+
+        # Threshold the dot product to create an occlusion map
+        occlusion_map = (dot_product > threshold).astype(np.float32)
+
+        # Dilate the occlusion map
+        kernel = np.ones((3, 3), np.uint8)
+        occlusion_map = cv2.dilate(occlusion_map, kernel, iterations=1)
+
+        # Apply a Gaussian filter
+        occlusion_map = cv2.GaussianBlur(occlusion_map, (55, 55), 5)
+
+        # Normalize the occlusion map
+        occlusion_map = (occlusion_map - occlusion_map.min()) / (occlusion_map.max() - occlusion_map.min())
+
+        return occlusion_map
+
     def generate(self, depth):
+        # Calculate the protrusion_map
+        protrusion_map = self.bkg_depth - depth
+
+        # surface point-cloud
         s = depth2cloud(self.cam_matrix, depth)
-
-        # elastic deformation
-        # if self.apply_elastic_deformation:
-        #     protrusion_map = self.bkg_depth - depth
-        #
-        #     protrusion_map_bin = protrusion_map.copy()
-        #     protrusion_map_bin[protrusion_map_bin > 1e-6] = 1
-        #     protrusion_map_bin = cv2.dilate(protrusion_map_bin, np.ones((10, 10), np.uint8), iterations=1)
-        #
-        #     elastic_deformation = self.elastic_deformation(protrusion_map + 0.0001 * protrusion_map_bin)
-        #
-        #     inv_protrusion_map_bin = 1 - protrusion_map_bin
-        #
-        #     inv_protrusion_map_bin = cv2.filter2D(inv_protrusion_map_bin, -1, gkern2(55, 5))
-        #
-        #     protrusion_map_bin = cv2.dilate(protrusion_map_bin, np.ones((5, 5), np.uint8), iterations=1)
-        #
-        #     # elastic_depth = np.minimum(depth, depth - elastic_deformation)
-        #     # elastic_depth = np.minimum(depth, self.bkg_depth + elastic_deformation)
-        #
-        #     dx = partial_derivative(protrusion_map_bin, 'x')
-        #     dy = partial_derivative(protrusion_map_bin, 'y')
-        #     ds = abs(dx) + abs(dy)
-        #     ds = cv2.filter2D(ds, -1, gkern2(55, 5))
-
-        # kernel =
-        # dilation[dilation > 1e-3] = 1
-
-        # fat_gauss_kernel = gkern2(55, 3)
-
-        # cv2.imshow('xxx', to_normed_rgb(ds))
-        # cv2.imshow('ds', to_normed_rgb(protrusion_map_bin))
-        # cv2.imshow('ds', to_normed_rgb(elastic_def))
-        # cv2.imshow('xxx', to_normed_rgb(protrusion_map))
-        # cv2.imshow('asd', to_normed_rgb(elastic_deformation))
-        # depth = elastic_depth
-        # + 0.1 * elastic_def - 0.35 * elastic_deformation
-        # elastic_depth = np.minimum(depth, self.bkg_depth - elastic_deformation)
-        # elastic_depth = self.bkg_depth - elastic_deformation
-        # elastic_s = depth2cloud(self.cam_matrix, elastic_depth)
-
-        # print('asdasd', (elastic_def.max()))
-
-        # s_elastic = depth2cloud(self.cam_matrix, depth)
-        # s_delta = s_elastic - s
-        # s_ = s
-        # s = elastic_s
 
         # Optical Rays = s - 0
         optical_rays = normalize_vectors(s)
 
-        # Apply elastic deformation to the membrane, over clouds
-        # if self.apply_elastic_deformation:
-        #     s_delta = self.s_ref - s
-        #     # s_sharp = s
-        #     protrusion_map = np.linalg.norm(s_delta, axis=2)
-        #     elastic_deformation = self.elastic_deformation(protrusion_map)
-        #     s = self.s_ref - elastic_deformation * optical_rays
+        # Calculate the occluded areas
+        occluded_areas = self.calculate_occluded_areas(protrusion_map, optical_rays)
+        print('areas', np.min(occluded_areas), np.max(occluded_areas))
+        cv2.imshow('areas', to_normed_rgb(occluded_areas))
+        cv2.waitKey(-1)
 
-        # Add Random Gauss texture to the elastomer surface
-        # gauss_texture = self.gauss_texture(s.shape[0:2])
-        # s += gauss_texture * optical_rays
+        # binary_map = np.where(protrusion_map > 0.000001, 1, 0).astype(np.float32)
+        # areas_x = partial_derivative(binary_map, 'x')
+        # areas_y = partial_derivative(binary_map, 'y')
+        #
+        # sign_or_x = np.sign(optical_rays[:, :, 0])
+        # sign_or_y = np.sign(optical_rays[:, :, 1])
+        # sign_a_x = np.sign(areas_x)
+        # sign_a_y = np.sign(areas_y)
+        #
+        # occluded_areas = np.clip((np.equal(sign_a_x, sign_or_x).astype(np.float32) +
+        #                  np.equal(sign_a_y, sign_or_y).astype(np.float32)) / 0.05, 0, 1)
+        #
+        # kernel = np.ones((3, 3), np.uint8)
+        # occluded_areas = cv2.dilate(occluded_areas, kernel, iterations=1)
+        # occluded_areas = cv2.filter2D(occluded_areas, -1, gkern2(55, 5))
+        # occluded_areas = occluded_areas - np.min(occluded_areas)
+        # occluded_areas = occluded_areas / np.max(occluded_areas)
+        # occluded_areas = (1 - binary_map) * occluded_areas
 
-        # Phong's illumination vectors (n, v) calculations
+        # elastic deformation (as in the paper, submitted to RSS)
+        if self.apply_elastic_deformation:
+            elastic_deformation = cv2.filter2D(self.bkg_depth - depth, -1, gkern2(55, 5))
+
+            elastic_deformation = np.maximum((1 - occluded_areas) * elastic_deformation, np.zeros_like(occluded_areas))
+            depth = np.minimum(depth, self.bkg_depth - elastic_deformation).astype(np.float32)
+            print(depth.dtype)
+
+        # surface point-cloud
+        s = depth2cloud(self.cam_matrix, depth)
+
+        # Optical Rays = s - 0
+        optical_rays = normalize_vectors(s)
+
+        # illumination vectors (n, v) calculations
         n = - normals(s)
-
         v = - optical_rays
 
-        I = self.background_img * self.ia \
-            + np.sum([self._spec_diff(lm, v, n, s) for lm in self.lights], axis=0)
+        # Calculate the absolute difference between bkg_depth and depth using the precomputed protrusion_map
+        contact_diff = np.abs(protrusion_map)
+
+        # Clip the difference to a maximum value (e.g., 0.03)
+        contact_diff = np.clip(contact_diff, 0, 0.03)
+
+        # Normalize the difference to a percentage
+        contact_percentage = contact_diff / 0.03
+
+        # Multiply the internal_shadow by the percentage and clip it to a valid range (0 to 1)
+        shadow_factor = np.clip(self.internal_shadow * contact_percentage, 0, 1)
+
+        ambient_component = self.background_img * (self.ia - shadow_factor)[:, :, np.newaxis]
+
+        I = ambient_component + np.sum([self._spec_diff(lm, v, n, s) for lm in self.lights], axis=0)
 
         I_rgb = (I * 255.0)
         I_rgb[I_rgb > 255.0] = 255.0
         I_rgb[I_rgb < 0.0] = 0.0
         I_rgb = I_rgb.astype(np.uint8)
 
-        # plot_depth_lines(
-        #     [elastic_s, s_],
-        #     depth,
-        #     row=s.shape[0] // 2 + 10,
-        #     rgb_frame=I_rgb,
-        #     legends=['Base depth', 'DoG depth']
-        # )
+        # Normalize the occluded_mask values to 0 to 255
+        occluded_map = (occluded_areas.astype(np.float32) * 255).astype(np.uint8)
+
+        # Convert occluded_map to 3-channel image
+        occluded_map_3channel = cv2.cvtColor(occluded_map, cv2.COLOR_GRAY2BGR)
+
+        # Overlay the occluded_map over I_rgb with 50% opacity
+        I_rgb_overlay = cv2.addWeighted(I_rgb, 0.5, occluded_map_3channel, 0.5, 0)
+
+        # Normalize the RGB values
+        I_rgb_overlay = np.clip(I_rgb_overlay, 0, 255).astype(np.uint8)
+
+        # Display the occluded_map and the overlay image
+        # cv2.imshow('Occluded Map', occluded_map)
+        cv2.imshow('Overlay Image', I_rgb_overlay)
+        cv2.imshow('Image', I_rgb)
+        cv2.waitKey(-1)
 
         return I_rgb
